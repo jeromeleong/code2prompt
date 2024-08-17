@@ -1,28 +1,39 @@
-//! code2prompt is a command-line tool to generate an LLM prompt from a codebase directory.
-//!
-//! Author: Mufeed VH (@mufeedvh)
-//! Contributor: Olivier D'Ancona (@ODAncona)
-
 use anyhow::{Context, Result};
+use std::path::Path;
 use clap::Parser;
-use code2prompt::{
+use c2p::{
     copy_to_clipboard, get_git_diff, get_git_diff_between_branches, get_git_log, get_model_info,
     get_tokenizer, handle_undefined_variables, handlebars_setup, label, render_template,
     traverse_directory, write_to_file,
 };
 use colored::*;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::{debug, error};
+use log::debug;
 use serde_json::json;
 use std::path::PathBuf;
+use std::fs;
 
-// Constants
 const DEFAULT_TEMPLATE_NAME: &str = "default";
 const CUSTOM_TEMPLATE_NAME: &str = "custom";
 
-// CLI Arguments
+const TEMPLATES: &[(&str, &str, &str)] = &[
+    ("document-the-code", include_str!("../templates/document-the-code.hbs"), "生成代碼文檔"),
+    ("find-security-vulnerabilities", include_str!("../templates/find-security-vulnerabilities.hbs"), "查找安全漏洞"),
+    ("clean-up-code", include_str!("../templates/clean-up-code.hbs"), "清理代碼"),
+    ("write-github-pull-request", include_str!("../templates/write-github-pull-request.hbs"), "撰寫 GitHub Pull Request"),
+    ("write-git-commit", include_str!("../templates/write-git-commit.hbs"), "撰寫 Git Commit"),
+    ("binary-exploitation-ctf-solver", include_str!("../templates/binary-exploitation-ctf-solver.hbs"), "解決二進制利用 CTF 問題"),
+    ("cryptography-ctf-solver", include_str!("../templates/cryptography-ctf-solver.hbs"), "解決密碼學 CTF 問題"),
+    ("reverse-engineering-ctf-solver", include_str!("../templates/reverse-engineering-ctf-solver.hbs"), "解決逆向工程 CTF 問題"),
+    ("web-ctf-solver", include_str!("../templates/web-ctf-solver.hbs"), "解決 Web CTF 問題"),
+    ("fix-bugs", include_str!("../templates/fix-bugs.hbs"), "修復 Bug"),
+    ("write-github-readme", include_str!("../templates/write-github-readme.hbs"), "撰寫 GitHub README"),
+    ("improve-performance", include_str!("../templates/improve-performance.hbs"), "提升性能"),
+    ("refactor", include_str!("../templates/refactor.hbs"), "重構代碼"),
+];
+
 #[derive(Parser)]
-#[clap(name = "code2prompt", version = "2.0.0", author = "Mufeed VH")]
+#[clap(name = "c2p", version = "2.0.0", author = "Mufeed VH")]
 struct Cli {
     /// Path to the codebase directory
     #[arg()]
@@ -71,7 +82,7 @@ struct Cli {
     git_log_branch: Option<String>,
 
     /// Add line numbers to the source code
-    #[clap(short, long)]
+    #[clap(short = 'n', long)]
     line_number: bool,
 
     /// Disable wrapping code inside markdown code blocks
@@ -86,197 +97,44 @@ struct Cli {
     #[clap(long)]
     no_clipboard: bool,
 
+    /// Optional String to a default template
+    #[clap(short, long, num_args = 0..=1)]
+    template: Option<Option<String>>,
+
     /// Optional Path to a custom Handlebars template
-    #[clap(short, long)]
-    template: Option<PathBuf>,
+    #[clap(long)]
+    hbs: Option<PathBuf>,
 
     /// Print output as JSON
     #[clap(long)]
     json: bool,
+
+    /// Language to use for the response
+    #[clap(short, long)]
+    lang: Option<String>,
 }
 
-fn main() -> Result<()> {
-    env_logger::init();
-    let args = Cli::parse();
-
-    // Handlebars Template Setup
-    let (template_content, template_name) = get_template(&args)?;
-    let handlebars = handlebars_setup(&template_content, template_name)?;
-
-    // Progress Bar Setup
-    let spinner = setup_spinner("Traversing directory and building tree...");
-
-    // Parse Patterns
-    let include_patterns = parse_patterns(&args.include);
-    let exclude_patterns = parse_patterns(&args.exclude);
-
-    // Traverse the directory
-    let create_tree = traverse_directory(
-        &args.path,
-        &include_patterns,
-        &exclude_patterns,
-        args.include_priority,
-        args.line_number,
-        args.relative_paths,
-        args.exclude_from_tree,
-        args.no_codeblock,
-    );
-
-    let (tree, files) = match create_tree {
-        Ok(result) => result,
-        Err(e) => {
-            spinner.finish_with_message("Failed!".red().to_string());
-            eprintln!(
-                "{}{}{} {}",
-                "[".bold().white(),
-                "!".bold().red(),
-                "]".bold().white(),
-                format!("Failed to build directory tree: {}", e).red()
-            );
-            std::process::exit(1);
-        }
-    };
-
-    // Git Diff
-    let git_diff = if args.diff {
-        spinner.set_message("Generating git diff...");
-        get_git_diff(&args.path).unwrap_or_default()
-    } else {
-        String::new()
-    };
-
-    // git diff two get_git_diff_between_branches
-    let mut git_diff_branch: String = String::new();
-    if let Some(branches) = &args.git_diff_branch {
-        spinner.set_message("Generating git diff between two branches...");
-        let branches = parse_patterns(&Some(branches.to_string()));
-        if branches.len() != 2 {
-            error!("Please provide exactly two branches separated by a comma.");
-            std::process::exit(1);
-        }
-        git_diff_branch = get_git_diff_between_branches(&args.path, &branches[0], &branches[1])
-            .unwrap_or_default()
-    }
-
-    // git diff two get_git_diff_between_branches
-    let mut git_log_branch: String = String::new();
-    if let Some(branches) = &args.git_log_branch {
-        spinner.set_message("Generating git log between two branches...");
-        let branches = parse_patterns(&Some(branches.to_string()));
-        if branches.len() != 2 {
-            error!("Please provide exactly two branches separated by a comma.");
-            std::process::exit(1);
-        }
-        git_log_branch = get_git_log(&args.path, &branches[0], &branches[1]).unwrap_or_default()
-    }
-
-    spinner.finish_with_message("Done!".green().to_string());
-
-    // Prepare JSON Data
-    let mut data = json!({
-        "absolute_code_path": label(&args.path),
-        "source_tree": tree,
-        "files": files,
-        "git_diff": git_diff,
-        "git_diff_branch": git_diff_branch,
-        "git_log_branch": git_log_branch
-    });
-
-    debug!(
-        "JSON Data: {}",
-        serde_json::to_string_pretty(&data).unwrap()
-    );
-
-    // Handle undefined variables
-    handle_undefined_variables(&mut data, &template_content)?;
-
-    // Render the template
-    let rendered = render_template(&handlebars, template_name, &data)?;
-
-    // Display Token Count
-    let token_count = if args.tokens {
-        let bpe = get_tokenizer(&args.encoding);
-        bpe.encode_with_special_tokens(&rendered).len()
-    } else {
-        0
-    };
-
-    let paths: Vec<String> = files
+fn get_predefined_template(template_name: &str) -> Result<(String, String)> {
+    TEMPLATES
         .iter()
-        .filter_map(|file| {
-            file.get("path")
-                .and_then(|p| p.as_str())
-                .map(|s| s.to_string())
-        })
-        .collect();
-
-    let model_info = get_model_info(&args.encoding);
-
-    if args.json {
-        let json_output = json!({
-            "prompt": rendered,
-            "directory_name": label(&args.path),
-            "token_count": token_count,
-            "model_info": model_info,
-            "files": paths,
-        });
-        println!("{}", serde_json::to_string_pretty(&json_output)?);
-        return Ok(());
-    } else {
-        if args.tokens {
-            println!(
-                "{}{}{} Token count: {}, Model info: {}",
-                "[".bold().white(),
-                "i".bold().blue(),
-                "]".bold().white(),
-                token_count.to_string().bold().yellow(),
-                model_info
-            );
-        }
-    }
-
-    // Copy to Clipboard
-    if !args.no_clipboard {
-        match copy_to_clipboard(&rendered) {
-            Ok(_) => {
-                println!(
-                    "{}{}{} {}",
-                    "[".bold().white(),
-                    "✓".bold().green(),
-                    "]".bold().white(),
-                    "Copied to clipboard successfully.".green()
-                );
-            }
-            Err(e) => {
-                eprintln!(
-                    "{}{}{} {}",
-                    "[".bold().white(),
-                    "!".bold().red(),
-                    "]".bold().white(),
-                    format!("Failed to copy to clipboard: {}", e).red()
-                );
-                println!("{}", &rendered);
-            }
-        }
-    }
-
-    // Output File
-    if let Some(output_path) = &args.output {
-        write_to_file(output_path, &rendered)?;
-    }
-
-    Ok(())
+        .find(|(name, _, _)| *name == template_name)
+        .map(|(name, content, _)| (content.to_string(), name.to_string()))
+        .ok_or_else(|| anyhow::anyhow!("預定義模板 '{}' 未找到", template_name))
 }
 
-/// Sets up a progress spinner with a given message
-///
-/// # Arguments
-///
-/// * `message` - A message to display with the spinner
-///
-/// # Returns
-///
-/// * `ProgressBar` - The configured progress spinner
+fn get_custom_template(template_path: &Path) -> Result<(String, String)> {
+    let content = fs::read_to_string(template_path)
+        .with_context(|| format!("無法讀取自定義模板文件: {:?}", template_path))?;
+    Ok((content, CUSTOM_TEMPLATE_NAME.to_string()))
+}
+
+fn show_available_templates() {
+    println!("可用模板:");
+    for (template_name, _, description) in TEMPLATES.iter() {
+        println!("  - {} ({})", template_name, description);
+    }
+}
+
 fn setup_spinner(message: &str) -> ProgressBar {
     let spinner = ProgressBar::new_spinner();
     spinner.enable_steady_tick(std::time::Duration::from_millis(120));
@@ -290,42 +148,206 @@ fn setup_spinner(message: &str) -> ProgressBar {
     spinner
 }
 
-/// Parses comma-separated patterns into a vector of strings
-///
-/// # Arguments
-///
-/// * `patterns` - An optional string containing comma-separated patterns
-///
-/// # Returns
-///
-/// * `Vec<String>` - A vector of parsed patterns
 fn parse_patterns(patterns: &Option<String>) -> Vec<String> {
-    match patterns {
-        Some(patterns) if !patterns.is_empty() => {
-            patterns.split(',').map(|s| s.trim().to_string()).collect()
+    patterns
+        .as_ref()
+        .filter(|p| !p.is_empty())
+        .map(|p| p.split(',').map(str::trim).map(String::from).collect())
+        .unwrap_or_default()
+}
+
+fn get_git_diff_branch(args: &Cli, spinner: &ProgressBar) -> Result<String> {
+    if let Some(branches) = &args.git_diff_branch {
+        spinner.set_message("生成兩個分支之間的 git diff...");
+        let branches = parse_patterns(&Some(branches.to_string()));
+        if branches.len() != 2 {
+            return Err(anyhow::anyhow!("請提供兩個分支，以逗號分隔。"));
         }
-        _ => vec![],
+        Ok(get_git_diff_between_branches(&args.path, &branches[0], &branches[1]).unwrap_or_default())
+    } else {
+        Ok(String::new())
     }
 }
 
-/// Retrieves the template content and name based on the CLI arguments
-///
-/// # Arguments
-///
-/// * `args` - The parsed CLI arguments
-///
-/// # Returns
-///
-/// * `Result<(String, &str)>` - A tuple containing the template content and name
-fn get_template(args: &Cli) -> Result<(String, &str)> {
-    if let Some(template_path) = &args.template {
-        let content = std::fs::read_to_string(template_path)
-            .context("Failed to read custom template file")?;
-        Ok((content, CUSTOM_TEMPLATE_NAME))
+fn get_git_log_branch(args: &Cli, spinner: &ProgressBar) -> Result<String> {
+    if let Some(branches) = &args.git_log_branch {
+        spinner.set_message("生成兩個分支之間的 git log...");
+        let branches = parse_patterns(&Some(branches.to_string()));
+        if branches.len() != 2 {
+            return Err(anyhow::anyhow!("請提供兩個分支，以逗號分隔。"));
+        }
+        Ok(get_git_log(&args.path, &branches[0], &branches[1]).unwrap_or_default())
     } else {
-        Ok((
-            include_str!("default_template.hbs").to_string(),
-            DEFAULT_TEMPLATE_NAME,
-        ))
+        Ok(String::new())
     }
+}
+
+fn print_json_output(rendered: &str, path: &PathBuf, token_count: usize, model_info: &str, paths: &[String]) -> Result<()> {
+    let json_output = json!({
+        "prompt": rendered,
+        "directory_name": label(path),
+        "token_count": token_count,
+        "model_info": model_info,
+        "files": paths,
+    });
+    println!("{}", serde_json::to_string_pretty(&json_output)?);
+    Ok(())
+}
+
+fn print_normal_output(token_count: usize, model_info: &str, args: &Cli) {
+    if args.tokens {
+        println!(
+            "{}{}{} Token 數量: {}, 模型資訊: {}",
+            "[".bold().white(),
+            "i".bold().blue(),
+            "]".bold().white(),
+            token_count.to_string().bold().yellow(),
+            model_info
+        );
+    }
+}
+
+fn copy_to_clipboard_with_feedback(rendered: &str) {
+    match copy_to_clipboard(rendered) {
+        Ok(_) => {
+            println!(
+                "{}{}{} {}",
+                "[".bold().white(),
+                "✓".bold().green(),
+                "]".bold().white(),
+                "成功複製到剪貼板。".green()
+            );
+        }
+        Err(e) => {
+            eprintln!(
+                "{}{}{} {}",
+                "[".bold().white(),
+                "!".bold().red(),
+                "]".bold().white(),
+                format!("複製到剪貼板失敗: {}", e).red()
+            );
+            println!("{}", rendered);
+        }
+    }
+}
+
+fn main() -> Result<()> {
+    env_logger::init();
+    let args = Cli::parse();
+
+    let (template_content, template_name) = if let Some(hbs_path) = &args.hbs {
+        // 使用自定義模板文件
+        get_custom_template(Path::new(hbs_path))?
+    } else if let Some(template_option) = &args.template {
+        match template_option {
+            Some(template_name) => {
+                // 使用預定義模板
+                get_predefined_template(template_name)?
+            }
+            None => {
+                // 當 -t 參數存在但沒有提供值時，顯示可用的模板並退出
+                show_available_templates();
+                std::process::exit(0);
+            }
+        }
+    } else {
+        // 使用默認模板
+        (include_str!("default_template.hbs").to_string(), DEFAULT_TEMPLATE_NAME.to_string())
+    };
+
+    let handlebars = handlebars_setup(&template_content, &template_name)?;
+
+    let spinner = setup_spinner("遍歷目錄並構建樹...");
+
+    let include_patterns = parse_patterns(&args.include);
+    let exclude_patterns = parse_patterns(&args.exclude);
+
+    let (tree, files) = traverse_directory(
+        &args.path,
+        &include_patterns,
+        &exclude_patterns,
+        args.include_priority,
+        args.line_number,
+        args.relative_paths,
+        args.exclude_from_tree,
+        args.no_codeblock,
+    )
+    .map_err(|e| {
+        spinner.finish_with_message("失敗!".red().to_string());
+        anyhow::anyhow!("無法構建目錄樹: {}", e)
+    })?;
+
+    let git_diff = if args.diff {
+        spinner.set_message("生成 git diff...");
+        match get_git_diff(&args.path) {
+            Ok(diff) => {
+                if diff.is_empty() {
+                    println!("沒有檢測到未暫存的更改。");
+                } else {
+                    println!("成功獲取 git diff 的內容。");
+                }
+                diff
+            },
+            Err(e) => {
+                eprintln!("獲取 git diff 時出錯: {}", e);
+                String::new()
+            }
+        }
+    } else {
+        String::new()
+    };
+
+    let git_diff_branch = get_git_diff_branch(&args, &spinner)?;
+    let git_log_branch = get_git_log_branch(&args, &spinner)?;
+
+    spinner.finish_with_message("完成!".green().to_string());
+
+    let mut data = json!({
+        "absolute_code_path": label(&args.path),
+        "source_tree": tree,
+        "files": files,
+        "git_diff": git_diff,
+        "git_diff_branch": git_diff_branch,
+        "git_log_branch": git_log_branch
+    });
+
+    debug!("JSON 數據: {}", serde_json::to_string_pretty(&data)?);
+
+    handle_undefined_variables(&mut data, &template_content)?;
+
+    let mut rendered = render_template(&handlebars, &template_name, &data)?;
+
+    if let Some(lang) = &args.lang {
+        rendered.push_str(&format!("\nYou must use {} language to reply", lang));
+    }
+
+    let token_count = if args.tokens {
+        let bpe = get_tokenizer(&args.encoding);
+        bpe.encode_with_special_tokens(&rendered).len()
+    } else {
+        0
+    };
+
+    let paths: Vec<String> = files
+        .iter()
+        .filter_map(|file| file.get("path").and_then(|p| p.as_str()).map(String::from))
+        .collect();
+
+    let model_info = get_model_info(&args.encoding);
+
+    if args.json {
+        print_json_output(&rendered, &args.path, token_count, &model_info, &paths)?;
+    } else {
+        print_normal_output(token_count, &model_info, &args);
+    }
+
+    if !args.no_clipboard {
+        copy_to_clipboard_with_feedback(&rendered);
+    }
+
+    if let Some(output_path) = &args.output {
+        write_to_file(output_path, &rendered)?;
+    }
+
+    Ok(())
 }

@@ -17,13 +17,22 @@ use std::path::Path;
 pub fn get_git_diff(repo_path: &Path) -> Result<String> {
     info!("Opening repository at path: {:?}", repo_path);
     let repo = Repository::open(repo_path).context("Failed to open repository")?;
-    let head = repo.head().context("Failed to get repository head")?;
-    let head_tree = head.peel_to_tree().context("Failed to peel to tree")?;
 
+    // 獲取 HEAD 提交
+    let head_commit = repo.head()?.peel_to_commit()?;
+    let head_tree = head_commit.tree()?;
+
+    // 創建一個表示工作目錄的樹
+    let mut index = repo.index()?;
+    index.update_all(["*"].iter(), None)?;
+    let work_tree_oid = index.write_tree()?;
+    let work_tree = repo.find_tree(work_tree_oid)?;
+
+    // 比較 HEAD 和工作目錄
     let diff = repo
-        .diff_tree_to_index(
+        .diff_tree_to_tree(
             Some(&head_tree),
-            None,
+            Some(&work_tree),
             Some(DiffOptions::new().ignore_whitespace(true)),
         )
         .context("Failed to generate diff")?;
@@ -35,8 +44,16 @@ pub fn get_git_diff(repo_path: &Path) -> Result<String> {
     })
     .context("Failed to print diff")?;
 
-    info!("Generated git diff successfully");
-    Ok(String::from_utf8_lossy(&diff_text).into_owned())
+    let diff_string = String::from_utf8_lossy(&diff_text).into_owned();
+    
+    info!("Generated git diff successfully. Diff length: {} bytes", diff_string.len());
+    if diff_string.is_empty() {
+        info!("Git diff is empty. This might mean there are no changes or all changes are staged.");
+    } else {
+        info!("First 100 characters of diff: {}", &diff_string[..std::cmp::min(100, diff_string.len())]);
+    }
+
+    Ok(diff_string)
 }
 
 /// Generates a git diff between two branches for the repository at the provided path

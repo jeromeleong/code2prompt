@@ -1,262 +1,136 @@
-# code2prompt
+# c2p
 
-[![crates.io](https://img.shields.io/crates/v/code2prompt.svg#cache1)](https://crates.io/crates/code2prompt)
-[![LICENSE](https://img.shields.io/github/license/mufeedvh/code2prompt.svg#cache1)](https://github.com/mufeedvh/code2prompt/blob/master/LICENSE)
+## 簡介
+`c2p` 是一個命令行工具（CLI），用於從任何大小的代碼庫快速生成 LLM 提示。它支持源代碼樹、提示模板化和令牌計數。
 
-<h1 align="center">
-  <a href="https://github.com/mufeedvh/code2prompt"><img src=".assets/code2prompt-screenshot.png" alt="code2prompt"></a>
-</h1>
+## 功能
+- 從代碼庫快速生成 LLM 提示。
+- 自定義提示生成使用 Handlebars 模板。
+- 尊重 `.gitignore`。
+- 使用 glob 模式過濾和排除文件。
+- 顯示生成提示的令牌計數。
+- 可選地包含 Git diff 輸出（已暫存的文件）。
+- 自動將生成的提示複製到剪貼板。
+- 將生成的提示保存到輸出文件。
+- 按名稱或路徑排除文件和文件夾。
+- 為源代碼塊添加行號。
 
-`code2prompt` is a command-line tool (CLI) that converts your codebase into a single LLM prompt with a source tree, prompt templating, and token counting.
-
-## Table of Contents
-
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Templates](#templates)
-- [User Defined Variables](#user-defined-variables)
-- [Tokenizers](#tokenizers)
-- [Build From Source](#build-from-source)
-- [Contribution](#contribution)
-- [License](#license)
-- [Support The Author](#support-the-author)
-
-## Features
-
-You can run this tool on the entire directory and it would generate a well-formatted Markdown prompt detailing the source tree structure, and all the code. You can then upload this document to either GPT or Claude models with higher context windows and ask it to:
-
-- Quickly generate LLM prompts from codebases of any size.
-- Customize prompt generation with Handlebars templates. (See the [default template](src/default_template.hbs))
-- Respects `.gitignore`.
-- Filter and exclude files using glob patterns.
-- Display the token count of the generated prompt. (See [Tokenizers](#tokenizers) for more details)
-- Optionally include Git diff output (staged files) in the generated prompt.
-- Automatically copy the generated prompt to the clipboard.
-- Save the generated prompt to an output file.
-- Exclude files and folders by name or path.
-- Add line numbers to source code blocks.
-
-You can customize the prompt template to achieve any of the desired use cases. It essentially traverses a codebase and creates a prompt with all source files combined. In short, it automates copy-pasting multiple source files into your prompt and formatting them along with letting you know how many tokens your code consumes.
-
-## Installation
-
-### Latest Release
-
-Download the latest binary for your OS from [Releases](https://github.com/mufeedvh/code2prompt/releases) OR install with `cargo`:
+## 安裝說明
+### 最新發布版本
+從 [Releases](https://github.com/jeromeleong/c2p/releases) 下載適用於您操作系統的最新二進制文件，或使用 `cargo` 安裝：
 
 ```sh
-cargo install code2prompt
+cargo install --git https://github.com/jeromeleong/c2p
 ```
 
-For unpublished builds:
-
-```sh
-cargo install --git https://github.com/mufeedvh/code2prompt
-```
-
-### Prerequisites
-
-For building `code2prompt` from source, you need to have these tools installed:
-
+### 從源代碼構建
+您需要安裝以下工具：
 - [Git](https://git-scm.org/downloads)
 - [Rust](https://rust-lang.org/tools/install)
-- Cargo (Automatically installed when installing Rust)
+- Cargo（安裝 Rust 時自動安裝）
 
 ```sh
-git clone https://github.com/mufeedvh/code2prompt.git
-cd code2prompt/
+git clone https://github.com/jeromeleong/c2p.git
+cd c2p/
 cargo build --release
 ```
 
-The first command clones the `code2prompt` repository to your local machine. The next two commands change into the `code2prompt` directory and build it in release mode.
-
-## Usage
-
-Generate a prompt from a codebase directory:
+## 使用示例
+生成代碼庫的提示：
 
 ```sh
-code2prompt path/to/codebase
+c2p path/to/codebase
 ```
 
-Use a custom Handlebars template file:
+查看預設模板：
 
 ```sh
-code2prompt path/to/codebase -t path/to/template.hbs
+c2p path/to/codebase -t
 ```
 
-Filter files using glob patterns:
+使用預設模板：
 
 ```sh
-code2prompt path/to/codebase --include="*.rs,*.toml"
+c2p path/to/codebase -t template
 ```
 
-Exclude files using glob patterns:
+使用自定義 Handlebars 模板文件：
 
 ```sh
-code2prompt path/to/codebase --exclude="*.txt,*.md"
+c2p path/to/codebase --hbs path/to/template.hbs
 ```
 
-Exclude files/folders from the source tree based on exclude patterns:
+使用 glob 模式過濾文件：
 
 ```sh
-code2prompt path/to/codebase --exclude="*.npy,*.wav" --exclude-from-tree
+c2p path/to/codebase --include="*.rs,*.toml"
 ```
 
-Display the token count of the generated prompt:
+排除文件使用 glob 模式：
 
 ```sh
-code2prompt path/to/codebase --tokens
+c2p path/to/codebase --exclude="*.txt,*.md"
 ```
 
-Specify a tokenizer for token count:
+顯示生成提示的令牌計數：
 
 ```sh
-code2prompt path/to/codebase --tokens --encoding=p50k
+c2p path/to/codebase --tokens
 ```
 
-Supported tokenizers: `cl100k`, `p50k`, `p50k_edit`, `r50k_bas`.
-> [!NOTE]  
-> See [Tokenizers](#tokenizers) for more details.
-
-Save the generated prompt to an output file:
+指定令牌計數的令牌化器：
 
 ```sh
-code2prompt path/to/codebase --output=output.txt
+c2p path/to/codebase --tokens --encoding=p50k
 ```
 
-Print output as JSON:
+保存生成的提示到輸出文件：
 
 ```sh
-code2prompt path/to/codebase --json
+c2p path/to/codebase --output=output.txt
 ```
 
-The JSON output will have the following structure:
-
-```json
-{
-  "prompt": "<Generated Prompt>", 
-  "directory_name": "codebase",
-  "token_count": 1234,
-  "model_info": "ChatGPT models, text-embedding-ada-002",
-  "files": []
-}
-```
-
-Generate a Git commit message (for staged files):
+指定回應語言：
 
 ```sh
-code2prompt path/to/codebase --diff -t templates/write-git-commit.hbs
+c2p path/to/codebase --lang zh-hant
 ```
 
-Generate a Pull Request with branch comparing (for staged files):
+## 配置選項
+- `--include`: 包含的文件模式。
+- `--exclude`: 排除的文件模式。
+- `--include-priority`: 在包含和排除模式衝突時優先包含。
+- `--tokens`: 顯示令牌計數。
+- `--encoding`: 指定令牌化器的編碼。
+- `--output`: 輸出文件路徑。
+- `--diff`: 包含 Git diff 輸出。
+- `--git-diff-branch`: 生成兩個分支之間的 Git diff。
+- `--git-log-branch`: 檢索兩個分支之間的 Git log。
+- `--line-number`: 為源代碼塊添加行號。
+- `--no-codeblock`: 禁用將代碼包裝在 markdown 代碼塊中。
+- `--relative-paths`: 使用相對路徑。
+- `--no-clipboard`: 禁用複製到剪貼板。
+- `--hbs`: 自定義 Handlebars 模板文件路徑。
+- `--json`: 以 JSON 格式打印輸出。
+- `--lang`: 指定回應語言。
+
+## 貢獻指南
+歡迎貢獻！您可以通過以下方式參與：
+- 提出功能建議
+- 報告錯誤
+- 修復問題並提交拉取請求
+- 幫助文檔
+- 推廣項目
+
+## 測試說明
+項目包含單元測試和集成測試。您可以使用以下命令運行測試：
 
 ```sh
-code2prompt path/to/codebase --git-diff-branch 'main, development' --git-log-branch 'main, development' -t templates/write-github-pull-request.hbs
+cargo test
 ```
 
-Add line numbers to source code blocks:
+## 許可證
+本項目採用 MIT 許可證，詳情請參閱 [LICENSE](https://github.com/jeromeleong/c2p/blob/master/LICENSE)。
 
-```sh
-code2prompt path/to/codebase --line-number
-```
-
-Disable wrapping code inside markdown code blocks:
-
-```sh
-code2prompt path/to/codebase --no-codeblock
-```
-
-- Rewrite the code to another language.
-- Find bugs/security vulnerabilities.
-- Document the code.
-- Implement new features.
-
-> I initially wrote this for personal use to utilize Claude 3.0's 200K context window and it has proven to be pretty useful so I decided to open-source it!
-
-## Templates
-
-`code2prompt` comes with a set of built-in templates for common use cases. You can find them in the [`templates`](templates) directory.
-
-### [`document-the-code.hbs`](templates/document-the-code.hbs)
-
-Use this template to generate prompts for documenting the code. It will add documentation comments to all public functions, methods, classes and modules in the codebase.
-
-### [`find-security-vulnerabilities.hbs`](templates/find-security-vulnerabilities.hbs)
-
-Use this template to generate prompts for finding potential security vulnerabilities in the codebase. It will look for common security issues and provide recommendations on how to fix or mitigate them.
-
-### [`clean-up-code.hbs`](templates/clean-up-code.hbs)
-
-Use this template to generate prompts for cleaning up and improving the code quality. It will look for opportunities to improve readability, adherence to best practices, efficiency, error handling, and more.
-
-### [`fix-bugs.hbs`](templates/fix-bugs.hbs)
-
-Use this template to generate prompts for fixing bugs in the codebase. It will help diagnose issues, provide fix suggestions, and update the code with proposed fixes.
-
-### [`write-github-pull-request.hbs`](templates/write-github-pull-request.hbs)
-
-Use this template to create GitHub pull request description in markdown by comparing the git diff and git log of two branches.
-
-### [`write-github-readme.hbs`](templates/write-github-readme.hbs)
-
-Use this template to generate a high-quality README file for the project, suitable for hosting on GitHub. It will analyze the codebase to understand its purpose and functionality, and generate the README content in Markdown format.
-
-### [`write-git-commit.hbs`](templates/write-git-commit.hbs)
-
-Use this template to generate git commits from the staged files in your git directory. It will analyze the codebase to understand its purpose and functionality, and generate the git commit message content in Markdown format.
-
-### [`improve-performance.hbs`](templates/improve-performance.hbs)
-
-Use this template to generate prompts for improving the performance of the codebase. It will look for optimization opportunities, provide specific suggestions, and update the code with the changes.
-
-You can use these templates by passing the `-t` flag followed by the path to the template file. For example:
-
-```sh
-code2prompt path/to/codebase -t templates/document-the-code.hbs
-```
-
-## User Defined Variables
-
-`code2prompt` supports the use of user defined variables in the Handlebars templates. Any variables in the template that are not part of the default context (`absolute_code_path`, `source_tree`, `files`) will be treated as user defined variables.
-
-During prompt generation, `code2prompt` will prompt the user to enter values for these user defined variables. This allows for further customization of the generated prompts based on user input.
-
-For example, if your template includes `{{challenge_name}}` and `{{challenge_description}}`, you will be prompted to enter values for these variables when running `code2prompt`.
-
-This feature enables creating reusable templates that can be adapted to different scenarios based on user provided information.
-
-## Tokenizers
-
-Tokenization is implemented using [`tiktoken-rs`](https://github.com/zurawiki/tiktoken-rs). `tiktoken` supports these encodings used by OpenAI models:
-
-| Encoding name           | OpenAI models                                                             |
-| ----------------------- | ------------------------------------------------------------------------- |
-| `cl100k_base`           | ChatGPT models, `text-embedding-ada-002`                                  |
-| `p50k_base`             | Code models, `text-davinci-002`, `text-davinci-003`                       |
-| `p50k_edit`             | Use for edit models like `text-davinci-edit-001`, `code-davinci-edit-001` |
-| `r50k_base` (or `gpt2`) | GPT-3 models like `davinci`                                               |
-
-For more context on the different tokenizers, see the [OpenAI Cookbook](https://github.com/openai/openai-cookbook/blob/66b988407d8d13cad5060a881dc8c892141f2d5c/examples/How_to_count_tokens_with_tiktoken.ipynb)
-
-## How is it useful?
-
-`code2prompt` makes it easy to generate prompts for LLMs from your codebase. It traverses the directory, builds a tree structure, and collects information about each file. You can customize the prompt generation using Handlebars templates. The generated prompt is automatically copied to your clipboard and can also be saved to an output file. `code2prompt` helps streamline the process of creating LLM prompts for code analysis, generation, and other tasks.
-
-## Contribution
-
-Ways to contribute:
-
-- Suggest a feature
-- Report a bug  
-- Fix something and open a pull request
-- Help me document the code
-- Spread the word
-
-## License
-
-Licensed under the MIT License, see <a href="https://github.com/mufeedvh/code2prompt/blob/master/LICENSE">LICENSE</a> for more information.
-
-## Liked the project?
-
-If you liked the project and found it useful, please give it a :star: and consider supporting the authors!
+## 致謝
+感謝所有貢獻者和開源社區的支持。特別感謝 Mufeed VH 和 Olivier D'Ancona 的貢獻。
