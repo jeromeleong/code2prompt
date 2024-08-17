@@ -45,12 +45,18 @@ pub fn get_git_diff(repo_path: &Path) -> Result<String> {
     .context("Failed to print diff")?;
 
     let diff_string = String::from_utf8_lossy(&diff_text).into_owned();
-    
-    info!("Generated git diff successfully. Diff length: {} bytes", diff_string.len());
+
+    info!(
+        "Generated git diff successfully. Diff length: {} bytes",
+        diff_string.len()
+    );
     if diff_string.is_empty() {
         info!("Git diff is empty. This might mean there are no changes or all changes are staged.");
     } else {
-        info!("First 100 characters of diff: {}", &diff_string[..std::cmp::min(100, diff_string.len())]);
+        info!(
+            "First 100 characters of diff: {}",
+            &diff_string[..std::cmp::min(100, diff_string.len())]
+        );
     }
 
     Ok(diff_string)

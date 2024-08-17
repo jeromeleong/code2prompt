@@ -1,35 +1,87 @@
 use anyhow::{Context, Result};
-use std::path::Path;
-use clap::Parser;
 use c2p::{
     copy_to_clipboard, get_git_diff, get_git_diff_between_branches, get_git_log, get_model_info,
     get_tokenizer, handle_undefined_variables, handlebars_setup, label, render_template,
     traverse_directory, write_to_file,
 };
+use clap::Parser;
 use colored::*;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::debug;
 use serde_json::json;
-use std::path::PathBuf;
 use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
 
 const DEFAULT_TEMPLATE_NAME: &str = "default";
 const CUSTOM_TEMPLATE_NAME: &str = "custom";
 
 const TEMPLATES: &[(&str, &str, &str)] = &[
-    ("document-the-code", include_str!("../templates/document-the-code.hbs"), "生成代碼文檔"),
-    ("find-security-vulnerabilities", include_str!("../templates/find-security-vulnerabilities.hbs"), "查找安全漏洞"),
-    ("clean-up-code", include_str!("../templates/clean-up-code.hbs"), "清理代碼"),
-    ("write-github-pull-request", include_str!("../templates/write-github-pull-request.hbs"), "撰寫 GitHub Pull Request"),
-    ("write-git-commit", include_str!("../templates/write-git-commit.hbs"), "撰寫 Git Commit"),
-    ("binary-exploitation-ctf-solver", include_str!("../templates/binary-exploitation-ctf-solver.hbs"), "解決二進制利用 CTF 問題"),
-    ("cryptography-ctf-solver", include_str!("../templates/cryptography-ctf-solver.hbs"), "解決密碼學 CTF 問題"),
-    ("reverse-engineering-ctf-solver", include_str!("../templates/reverse-engineering-ctf-solver.hbs"), "解決逆向工程 CTF 問題"),
-    ("web-ctf-solver", include_str!("../templates/web-ctf-solver.hbs"), "解決 Web CTF 問題"),
-    ("fix-bugs", include_str!("../templates/fix-bugs.hbs"), "修復 Bug"),
-    ("write-github-readme", include_str!("../templates/write-github-readme.hbs"), "撰寫 GitHub README"),
-    ("improve-performance", include_str!("../templates/improve-performance.hbs"), "提升性能"),
-    ("refactor", include_str!("../templates/refactor.hbs"), "重構代碼"),
+    (
+        "document-the-code",
+        include_str!("../templates/document-the-code.hbs"),
+        "生成代碼文檔",
+    ),
+    (
+        "find-security-vulnerabilities",
+        include_str!("../templates/find-security-vulnerabilities.hbs"),
+        "查找安全漏洞",
+    ),
+    (
+        "clean-up-code",
+        include_str!("../templates/clean-up-code.hbs"),
+        "清理代碼",
+    ),
+    (
+        "write-github-pull-request",
+        include_str!("../templates/write-github-pull-request.hbs"),
+        "撰寫 GitHub Pull Request",
+    ),
+    (
+        "write-git-commit",
+        include_str!("../templates/write-git-commit.hbs"),
+        "撰寫 Git Commit",
+    ),
+    (
+        "binary-exploitation-ctf-solver",
+        include_str!("../templates/binary-exploitation-ctf-solver.hbs"),
+        "解決二進制利用 CTF 問題",
+    ),
+    (
+        "cryptography-ctf-solver",
+        include_str!("../templates/cryptography-ctf-solver.hbs"),
+        "解決密碼學 CTF 問題",
+    ),
+    (
+        "reverse-engineering-ctf-solver",
+        include_str!("../templates/reverse-engineering-ctf-solver.hbs"),
+        "解決逆向工程 CTF 問題",
+    ),
+    (
+        "web-ctf-solver",
+        include_str!("../templates/web-ctf-solver.hbs"),
+        "解決 Web CTF 問題",
+    ),
+    (
+        "fix-bugs",
+        include_str!("../templates/fix-bugs.hbs"),
+        "修復 Bug",
+    ),
+    (
+        "write-github-readme",
+        include_str!("../templates/write-github-readme.hbs"),
+        "撰寫 GitHub README",
+    ),
+    (
+        "improve-performance",
+        include_str!("../templates/improve-performance.hbs"),
+        "提升性能",
+    ),
+    (
+        "refactor",
+        include_str!("../templates/refactor.hbs"),
+        "重構代碼",
+    ),
 ];
 
 #[derive(Parser)]
@@ -163,7 +215,10 @@ fn get_git_diff_branch(args: &Cli, spinner: &ProgressBar) -> Result<String> {
         if branches.len() != 2 {
             return Err(anyhow::anyhow!("請提供兩個分支，以逗號分隔。"));
         }
-        Ok(get_git_diff_between_branches(&args.path, &branches[0], &branches[1]).unwrap_or_default())
+        Ok(
+            get_git_diff_between_branches(&args.path, &branches[0], &branches[1])
+                .unwrap_or_default(),
+        )
     } else {
         Ok(String::new())
     }
@@ -182,7 +237,13 @@ fn get_git_log_branch(args: &Cli, spinner: &ProgressBar) -> Result<String> {
     }
 }
 
-fn print_json_output(rendered: &str, path: &PathBuf, token_count: usize, model_info: &str, paths: &[String]) -> Result<()> {
+fn print_json_output(
+    rendered: &str,
+    path: &PathBuf,
+    token_count: usize,
+    model_info: &str,
+    paths: &[String],
+) -> Result<()> {
     let json_output = json!({
         "prompt": rendered,
         "directory_name": label(path),
@@ -252,7 +313,10 @@ fn main() -> Result<()> {
         }
     } else {
         // 使用默認模板
-        (include_str!("default_template.hbs").to_string(), DEFAULT_TEMPLATE_NAME.to_string())
+        (
+            include_str!("default_template.hbs").to_string(),
+            DEFAULT_TEMPLATE_NAME.to_string(),
+        )
     };
 
     let handlebars = handlebars_setup(&template_content, &template_name)?;
@@ -287,7 +351,7 @@ fn main() -> Result<()> {
                     println!("成功獲取 git diff 的內容。");
                 }
                 diff
-            },
+            }
             Err(e) => {
                 eprintln!("獲取 git diff 時出錯: {}", e);
                 String::new()
