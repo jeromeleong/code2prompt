@@ -63,44 +63,53 @@ cargo build --release
 ## 使用示例
 生成默認提示：
 ```sh
-c2p path/to/codebase
+c2p path /path/to/codebase
 ```
 
 查看並選擇預定義 Handlebars 模板：
 
 ```sh
-c2p path/to/codebase -t
+c2p path /path/to/codebase -t
 ```
 
 使用指定的預定義 Handlebars 模板：
 
 ```sh
-c2p path/to/codebase -t template
+c2p path /path/to/codebase -t template
 ```
 
 使用自定義 Handlebars 模板文件：
 
 ```sh
-c2p path/to/codebase --hbs path/to/template.hbs
+c2p path /path/to/codebase --hbs path/to/template.hbs
 ```
 
 包含特定文件模式：
 ```sh
-c2p --path /path/to/your/codebase --include "*.rs,*.py"
+c2p path /path/to/your/codebase --include "*.rs,*.py"
 ```
 
 排除特定文件模式：
 ```sh
-c2p --path /path/to/your/codebase --exclude "*.log,*.txt"
+c2p path /path/to/your/codebase --exclude "*.log,*.txt"
+```
+
+從 GitHub 進行臨時克隆，然後生成默認提示：
+```sh
+c2p clone https://github.com/user/repo.git 
+```
+
+從 GitHub 進行臨時克隆，然後查看並選擇預定義 Handlebars 模板：
+```sh
+c2p clone https://github.com/user/repo.git -t
 ```
 
 ## 配置選項
-- `--path`: 代碼庫目錄路徑
+所有子命令都適用下面的配置
 - `--include`: 包含模式（多個模式用逗號分隔）
 - `--exclude`: 排除模式（多個模式用逗號分隔）
 - `--include-priority`: 在包含和排除模式衝突時，優先包含
 - `--exclude-from-tree`: 根據排除模式從源樹中排除文件/文件夾
-- `--tokens`: 顯示生成的提示的令牌數量
 - `--encoding`: 使用的令牌化器（默認為 cl100k）
 - `--output`: 輸出文件路徑
 - `--line-number`: 在源代碼中添加行號
