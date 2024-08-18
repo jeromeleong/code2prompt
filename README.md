@@ -10,7 +10,7 @@ c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時
 - 增加 `-l / --lang` 配置，設定AI 回答的語言，如`--lang zh-hant`是使用繁體中文回答
 - 增加 `--hbs <.hbs path>` 配置，用於使用自定義 Handlebars 模板文件
 - 修改 `-t / --template <template name>` 配置，專注於使用預定義的 Handlebars 模板文件
-    - 直接使用`-t`而不填寫`<template name>`，會顯示所有預定義的 Handlebars 模板文件的 Table，並提供交互的方式來選擇使用 相關 Handlebars 模板。
+    - 直接使用`-t`而不填寫`<template name>`，會顯示所有預定義的 Handlebars 模板文件，並提供交互的方式來選擇使用相關 Handlebars 模板。
     - 使用`-t <template name>`時，不需要填寫`.hbs`，如`-t write-git-commit` 即可
 - 移除 `-d / --diff` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容
 - 移除 `--git-diff-branch` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容，並用交互的方式獲取所需資料
@@ -56,7 +56,7 @@ cargo build --release
 ## 使用示例
 生成默認提示：
 ```sh
-c2p --path /path/to/your/codebase
+c2p path/to/codebase
 ```
 
 查看並選擇預定義 Handlebars 模板：

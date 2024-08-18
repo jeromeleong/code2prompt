@@ -7,7 +7,6 @@ use clap::Parser;
 use colored::*;
 use env_logger::Builder;
 use log::LevelFilter;
-use prettytable::{Table, Row, Cell};
 use inquire::{Text, Select};
 use serde_json::json;
 use std::fs;
@@ -117,13 +116,9 @@ struct Cli {
     #[clap(long)]
     exclude_from_tree: bool,
 
-    /// Display the token count of the generated prompt
-    #[clap(long)]
-    tokens: bool,
-
     /// Optional tokenizer to use for token count
     ///
-    /// Supported tokenizers: cl100k (default), p50k, p50k_edit, r50k, gpt2
+    /// Supported tokenizers: o200k(default), cl100k, p50k, p50k_edit, r50k, gpt2
     #[clap(short = 'c', long)]
     encoding: Option<String>,
 
@@ -221,7 +216,7 @@ fn print_json_output(
     token_count: usize,
     model_info: &str,
     paths: &[String],
-) -> Result<()> {
+) -> Result<String> {
     let json_output = json!({
         "prompt": rendered,
         "directory_name": c2p::path::label(path),
@@ -229,21 +224,19 @@ fn print_json_output(
         "model_info": model_info,
         "files": paths,
     });
-    println!("{}", serde_json::to_string_pretty(&json_output)?);
-    Ok(())
+    let json_string = serde_json::to_string_pretty(&json_output)?;
+    Ok(json_string)
 }
 
-fn print_normal_output(token_count: usize, model_info: &str, args: &Cli) {
-    if args.tokens {
-        println!(
-            "{}{}{} Token 數量: {}, 模型資訊: {}",
-            "[".bold().white(),
-            "i".bold().blue(),
-            "]".bold().white(),
-            token_count.to_string().bold().yellow(),
-            model_info
-        );
-    }
+fn print_normal_output(token_count: usize, model_info: &str) {
+    println!(
+        "{}{}{} Token 數量: {}, 模型資訊: {}",
+        "[".bold().white(),
+        "i".bold().blue(),
+        "]".bold().white(),
+        token_count.to_string().bold().yellow(),
+        model_info
+    );
 }
 
 fn copy_to_clipboard_with_feedback(rendered: &str) {
@@ -291,33 +284,23 @@ fn prompt_for_date_range() -> String {
     format!("{}..{}", start_date, end_date)
 }
 
-fn show_available_templates() -> Table {
-    let mut table = Table::new();
-    table.add_row(Row::new(vec![
-        Cell::new("No."),
-        Cell::new("Template Name"),
-        Cell::new("Template 用途"),
-    ]));
-
-    for (index, (template_name, _, description)) in TEMPLATES.iter().enumerate() {
-        table.add_row(Row::new(vec![
-            Cell::new(&(index + 1).to_string()),
-            Cell::new(template_name),
-            Cell::new(description),
-        ]));
-    }
-
-    table
-}
-
 fn select_template() -> Result<(String, String)> {
-    let table = show_available_templates();
-    table.printstd();
+    let max_name_length = TEMPLATES.iter().map(|(name, _, _)| name.len()).max().unwrap_or(0);
 
-    let options: Vec<&str> = TEMPLATES.iter().map(|(name, _, _)| *name).collect();
+    let options: Vec<String> = TEMPLATES
+        .iter()
+        .map(|(name, _, description)| {
+            let padding = " ".repeat(max_name_length - name.len());
+            format!("{} {} - {}", name, padding, description)
+        })
+        .collect();
+
     let selection = Select::new("請選擇一個模板:", options).prompt()?;
 
-    get_predefined_template(selection)
+    // 從選擇中提取模板名稱
+    let template_name = selection.split(" - ").next().unwrap_or_default().trim().to_string();
+
+    get_predefined_template(&template_name)
 }
 
 fn main() -> Result<()> {
@@ -327,6 +310,9 @@ fn main() -> Result<()> {
     let (template_content, template_name) = if let Some(hbs_path) = &args.hbs {
         // 使用自定義模板文件
         get_custom_template(Path::new(hbs_path))?
+    } else if let Some(Some(template_name)) = &args.template {
+        // 直接使用 -t <template name> 指定的模板
+        get_predefined_template(template_name)?
     } else if args.template.is_some() {
         // 當 -t 參數存在時，顯示模板表格並讓用戶選擇
         select_template()?
@@ -404,11 +390,9 @@ fn main() -> Result<()> {
         rendered.push_str(&format!("\nYou must use {} language to reply", lang));
     }
 
-    let token_count = if args.tokens {
+    let token_count =  {
         let bpe = c2p::token::get_tokenizer(&args.encoding);
         bpe.encode_with_special_tokens(&rendered).len()
-    } else {
-        0
     };
 
     let paths: Vec<String> = files
@@ -418,11 +402,13 @@ fn main() -> Result<()> {
 
     let model_info = c2p::token::get_model_info(&args.encoding);
 
-    if args.json {
-        print_json_output(&rendered, &args.path, token_count, &model_info, &paths)?;
+    let rendered = if args.json {
+        print_json_output(&rendered, &args.path, token_count, &model_info, &paths)?
     } else {
-        print_normal_output(token_count, &model_info, &args);
-    }
+        rendered
+    };
+
+    print_normal_output(token_count, &model_info);
 
     if !args.no_clipboard {
         copy_to_clipboard_with_feedback(&rendered);
