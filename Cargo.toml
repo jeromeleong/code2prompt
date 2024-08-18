@@ -1,13 +1,13 @@
 [package]
 name = "c2p"
-version = "2.0.0"
-authors = ["Mufeed VH <mufeed@lyminal.space>","Olivier D'Ancona <olivier.dancona@master.hes-so.ch>"]
+version = "2.1.0"
+authors = ["Mufeed VH <mufeed@lyminal.space>","Olivier D'Ancona <olivier.dancona@master.hes-so.ch>","Jerome Leong <jeromeleong1998@gmail.com>"]
 description = "A command-line (CLI) tool to generate an LLM prompt from codebases of any size, fast."
 keywords = ["code", "prompt", "llm", "gpt", "ai"]
 categories = ["command-line-utilities", "development-tools"]
-homepage = "https://github.com/mufeedvh/code2prompt"
-documentation = "https://github.com/mufeedvh/code2prompt"
-repository = "https://github.com/mufeedvh/code2prompt"
+homepage = "https://github.com/jeromeleong/c2p"
+documentation = "https://github.com/jeromeleong/c2p"
+repository = "https://github.com/jeromeleong/c2p"
 license = "MIT"
 readme = "README.md"
 exclude = [".github/*", ".assets/*"]
@@ -38,6 +38,8 @@ once_cell = "1.19.0"
 log = "0.4"
 env_logger = "0.11.3"
 arboard = "3.4.0"
+chrono = "0.4.38"
+prettytable = "0.10.0"
 
 [profile.release]
 lto = "thin"

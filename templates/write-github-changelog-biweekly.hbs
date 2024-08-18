@@ -1,0 +1,29 @@
+Project Path: {{ absolute_code_path }}
+
+I'd like you to generate a bi-weekly CHANGELOG file for this project, suitable for hosting on GitHub. Analyze the git log to understand the changes made during the specified period.
+
+{{#if git_log_date}}
+Git log for the period:
+```
+{{ git_log_date }}
+```
+{{/if}}
+
+The changelog should include the following sections:
+
+1. **Date Range**: [Specify the start and end dates here]
+2. **Summary of Changes**
+    - Brief overview of the main changes and updates made during this period, focusing on significant updates and avoiding redundancy.
+3. **Detailed Changes**
+    - **Added**: List of new features, files, or functionalities added, excluding those that were immediately removed.
+    - **Changed**: List of modifications to existing features or files, avoiding listing redundant changes caused by other operations (like adding and then removing).
+    - **Deprecated**: List of features or functionalities that will be removed in future releases.
+    - **Removed**: List of features, files, or functionalities that have been removed, excluding those that were recently added.
+    - **Fixed**: List of bug fixes, avoiding listing redundant fixes caused by other operations.
+    - **Security**: List of security-related fixes or improvements, avoiding redundant security updates.
+4. **Contributors**
+    - List of contributors who made changes during this period.
+
+Write the content in Markdown format. Use your analysis of the git log to generate accurate and helpful content, but also explain things clearly for users who may not be familiar with the implementation details.
+
+Feel free to infer reasonable details if needed, but try to stick to what can be determined from the git log. Let me know if you have any other questions as you're writing!

@@ -1,7 +1,7 @@
 //! This module handles git operations.
-
+use chrono::{DateTime, NaiveDate, Utc};
 use anyhow::{Context, Result};
-use git2::{DiffOptions, Repository};
+use git2::{Commit, DiffOptions, Repository};
 use log::info;
 use std::path::Path;
 
@@ -15,8 +15,8 @@ use std::path::Path;
 ///
 /// * `Result<String, git2::Error>` - The generated git diff as a string or an error
 pub fn get_git_diff(repo_path: &Path) -> Result<String> {
-    info!("Opening repository at path: {:?}", repo_path);
-    let repo = Repository::open(repo_path).context("Failed to open repository")?;
+    info!("正在打開倉庫,路徑:{:?}", repo_path);
+    let repo = Repository::open(repo_path).context("無法打開倉庫")?;
 
     // 獲取 HEAD 提交
     let head_commit = repo.head()?.peel_to_commit()?;
@@ -46,17 +46,8 @@ pub fn get_git_diff(repo_path: &Path) -> Result<String> {
 
     let diff_string = String::from_utf8_lossy(&diff_text).into_owned();
 
-    info!(
-        "Generated git diff successfully. Diff length: {} bytes",
-        diff_string.len()
-    );
     if diff_string.is_empty() {
-        info!("Git diff is empty. This might mean there are no changes or all changes are staged.");
-    } else {
-        info!(
-            "First 100 characters of diff: {}",
-            &diff_string[..std::cmp::min(100, diff_string.len())]
-        );
+        info!("Git diff 是空的。這可能意味著沒有變更或所有變更都已暫存。");
     }
 
     Ok(diff_string)
@@ -78,12 +69,12 @@ pub fn get_git_diff_between_branches(
     branch1: &str,
     branch2: &str,
 ) -> Result<String> {
-    info!("Opening repository at path: {:?}", repo_path);
-    let repo = Repository::open(repo_path).context("Failed to open repository")?;
+    info!("正在打開倉庫,路徑:{:?}", repo_path);
+    let repo = Repository::open(repo_path).context("無法打開倉庫")?;
 
     for branch in [branch1, branch2].iter() {
         if !branch_exists(&repo, branch) {
-            return Err(anyhow::anyhow!("Branch {} doesn't exist!", branch));
+            return Err(anyhow::anyhow!("分支 {} 不存在！", branch));
         }
     }
 
@@ -108,7 +99,7 @@ pub fn get_git_diff_between_branches(
     })
     .context("Failed to print diff")?;
 
-    info!("Generated git diff between branches successfully");
+    info!("成功生成分支之間的 git diff。");
     Ok(String::from_utf8_lossy(&diff_text).into_owned())
 }
 
@@ -123,42 +114,6 @@ pub fn get_git_diff_between_branches(
 /// # Returns
 ///
 /// * `Result<String, git2::Error>` - The git log as a string or an error
-pub fn get_git_log(repo_path: &Path, branch1: &str, branch2: &str) -> Result<String> {
-    info!("Opening repository at path: {:?}", repo_path);
-    let repo = Repository::open(repo_path).context("Failed to open repository")?;
-
-    for branch in [branch1, branch2].iter() {
-        if !branch_exists(&repo, branch) {
-            return Err(anyhow::anyhow!("Branch {} doesn't exist!", branch));
-        }
-    }
-
-    let branch1_commit = repo.revparse_single(branch1)?.peel_to_commit()?;
-    let branch2_commit = repo.revparse_single(branch2)?.peel_to_commit()?;
-
-    let mut revwalk = repo.revwalk().context("Failed to create revwalk")?;
-    revwalk
-        .push(branch2_commit.id())
-        .context("Failed to push branch2 commit to revwalk")?;
-    revwalk
-        .hide(branch1_commit.id())
-        .context("Failed to hide branch1 commit from revwalk")?;
-    revwalk.set_sorting(git2::Sort::REVERSE)?;
-
-    let mut log_text = String::new();
-    for oid in revwalk {
-        let oid = oid.context("Failed to get OID from revwalk")?;
-        let commit = repo.find_commit(oid).context("Failed to find commit")?;
-        log_text.push_str(&format!(
-            "{} - {}\n",
-            &commit.id().to_string()[..7],
-            commit.summary().unwrap_or("No commit message")
-        ));
-    }
-
-    info!("Retrieved git log successfully");
-    Ok(log_text)
-}
 
 /// Checks if a local branch exists in the given repository
 ///
@@ -175,4 +130,96 @@ fn branch_exists(repo: &Repository, branch_name: &str) -> bool {
         Ok(_) => true,
         Err(_) => false,
     }
+}
+
+pub fn get_git_log_by_date_range(repo_path: &Path, date_range: &str) -> Result<String> {
+    info!("正在打開倉庫,路徑: {:?}", repo_path);
+    let repo = Repository::open(repo_path).context("無法打開倉庫")?;
+
+    let dates: Vec<&str> = date_range.split("..").collect();
+    if dates.len() != 2 {
+        return Err(anyhow::anyhow!("無效的日期範圍格式,應為 'YYYY-MM-DD..YYYY-MM-DD'"));
+    }
+
+    let start_date = NaiveDate::parse_from_str(dates[0], "%Y-%m-%d")
+        .context("無法解析開始日期")?;
+    let end_date = NaiveDate::parse_from_str(dates[1], "%Y-%m-%d")
+        .context("無法解析結束日期")?;
+
+    let mut revwalk = repo.revwalk().context("無法創建 revwalk")?;
+    revwalk.push_head().context("無法推送 HEAD 到 revwalk")?;
+    revwalk.set_sorting(git2::Sort::TIME)?;
+
+    let mut log_text = String::new();
+    for oid in revwalk {
+        let oid = oid.context("無法從 revwalk 獲取 OID")?;
+        let commit = repo.find_commit(oid).context("無法找到提交")?;
+        let commit_time = commit.time().seconds();
+        let commit_date = DateTime::<Utc>::from_timestamp(commit_time, 0)
+            .map(|dt| dt.naive_utc().date())
+            .unwrap_or_else(|| {
+                NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+            });
+
+        if commit_date >= start_date && commit_date <= end_date {
+            log_text.push_str(&format_commit_with_diff(&repo, &commit)?);
+        } else if commit_date < start_date {
+            break;
+        }
+    }
+
+    info!("成功獲取 git log");
+    Ok(log_text)
+}
+
+fn format_commit_with_diff(repo: &Repository, commit: &Commit) -> Result<String> {
+    let mut output = String::new();
+
+    // 添加提交信息
+    output.push_str(&format!(
+        "commit {}\n",
+        commit.id()
+    ));
+    output.push_str(&format!(
+        "Author: {}\n",
+        commit.author()
+    ));
+    output.push_str(&format!(
+        "Date:   {}\n\n",
+        DateTime::<Utc>::from_timestamp(commit.time().seconds(), 0)
+            .unwrap()
+            .format("%Y-%m-%d %H:%M:%S %z")
+    ));
+    output.push_str(&format!("    {}\n\n", commit.message().unwrap_or("無提交信息")));
+
+    // 獲取變更內容
+    let parent = if commit.parent_count() > 0 {
+        Some(commit.parent(0)?)
+    } else {
+        None
+    };
+
+    let parent_tree = parent.as_ref().and_then(|c| c.tree().ok());
+    let commit_tree = commit.tree()?;
+
+    let mut diff_opts = DiffOptions::new();
+    let diff = repo.diff_tree_to_tree(
+        parent_tree.as_ref(),
+        Some(&commit_tree),
+        Some(&mut diff_opts),
+    )?;
+
+    // 將差異轉換為文本
+    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        let content = std::str::from_utf8(line.content()).unwrap_or("無法解碼的內容");
+        match line.origin() {
+            '+' | '-' | ' ' => output.push(line.origin()),
+            _ => {}
+        }
+        output.push_str(content);
+        true
+    })?;
+
+    output.push('\n');
+    Ok(output)
 }

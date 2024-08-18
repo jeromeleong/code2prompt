@@ -1,22 +1,47 @@
 use anyhow::{Context, Result};
-use c2p::{
-    copy_to_clipboard, get_git_diff, get_git_diff_between_branches, get_git_log, get_model_info,
-    get_tokenizer, handle_undefined_variables, handlebars_setup, label, render_template,
-    traverse_directory, write_to_file,
+use c2p::template::{
+    copy_to_clipboard, handle_undefined_variables, handlebars_setup, render_template,
+    template_contains_variables, write_to_file,
 };
 use clap::Parser;
 use colored::*;
-use indicatif::{ProgressBar, ProgressStyle};
-use log::debug;
+use env_logger::Builder;
+use log::LevelFilter;
+use prettytable::{Table, Row, Cell};
+use inquire::{Text, Select};
 use serde_json::json;
 use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const DEFAULT_TEMPLATE_NAME: &str = "default";
 const CUSTOM_TEMPLATE_NAME: &str = "custom";
 
 const TEMPLATES: &[(&str, &str, &str)] = &[
+    (
+        "write-git-commit",
+        include_str!("../templates/write-git-commit.hbs"),
+        "撰寫 Git Commit 的摘要",
+    ),
+    (
+        "write-github-pull-request",
+        include_str!("../templates/write-github-pull-request.hbs"),
+        "撰寫 Git Pull Request 的摘要",
+    ),
+    (
+        "write-github-readme",
+        include_str!("../templates/write-github-readme.hbs"),
+        "撰寫 README 文件",
+    ),
+    (
+        "write-github-changelog-daily",
+        include_str!("../templates/write-github-changelog-daily.hbs"),
+        "撰寫「以每天總結一次」ChangeLog 文件",
+    ),
+    (
+        "write-github-changelog-biweekly",
+        include_str!("../templates/write-github-changelog-biweekly.hbs"),
+        "撰寫「以每兩周總結一次」ChangeLog 文件",
+    ),
     (
         "document-the-code",
         include_str!("../templates/document-the-code.hbs"),
@@ -31,16 +56,6 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
         "clean-up-code",
         include_str!("../templates/clean-up-code.hbs"),
         "清理代碼",
-    ),
-    (
-        "write-github-pull-request",
-        include_str!("../templates/write-github-pull-request.hbs"),
-        "撰寫 GitHub Pull Request",
-    ),
-    (
-        "write-git-commit",
-        include_str!("../templates/write-git-commit.hbs"),
-        "撰寫 Git Commit",
     ),
     (
         "binary-exploitation-ctf-solver",
@@ -68,11 +83,6 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
         "修復 Bug",
     ),
     (
-        "write-github-readme",
-        include_str!("../templates/write-github-readme.hbs"),
-        "撰寫 GitHub README",
-    ),
-    (
         "improve-performance",
         include_str!("../templates/improve-performance.hbs"),
         "提升性能",
@@ -85,7 +95,7 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
 ];
 
 #[derive(Parser)]
-#[clap(name = "c2p", version = "2.0.0", author = "Mufeed VH")]
+#[clap(name = "c2p", version = "2.1.0", author = "Mufeed VH & Olivier D & Jerome Leong")]
 struct Cli {
     /// Path to the codebase directory
     #[arg()]
@@ -120,18 +130,6 @@ struct Cli {
     /// Optional output file path
     #[clap(short, long)]
     output: Option<String>,
-
-    /// Include git diff
-    #[clap(short, long)]
-    diff: bool,
-
-    /// Generate git diff between two branches
-    #[clap(long, value_name = "BRANCHES")]
-    git_diff_branch: Option<String>,
-
-    /// Retrieve git log between two branches
-    #[clap(long, value_name = "BRANCHES")]
-    git_log_branch: Option<String>,
 
     /// Add line numbers to the source code
     #[clap(short = 'n', long)]
@@ -180,26 +178,6 @@ fn get_custom_template(template_path: &Path) -> Result<(String, String)> {
     Ok((content, CUSTOM_TEMPLATE_NAME.to_string()))
 }
 
-fn show_available_templates() {
-    println!("可用模板:");
-    for (template_name, _, description) in TEMPLATES.iter() {
-        println!("  - {} ({})", template_name, description);
-    }
-}
-
-fn setup_spinner(message: &str) -> ProgressBar {
-    let spinner = ProgressBar::new_spinner();
-    spinner.enable_steady_tick(std::time::Duration::from_millis(120));
-    spinner.set_style(
-        ProgressStyle::default_spinner()
-            .tick_strings(&["▹▹▹▹▹", "▸▹▹▹▹", "▹▸▹▹▹", "▹▹▸▹▹", "▹▹▹▸▹", "▹▹▹▹▸"])
-            .template("{spinner:.blue} {msg}")
-            .unwrap(),
-    );
-    spinner.set_message(message.to_string());
-    spinner
-}
-
 fn parse_patterns(patterns: &Option<String>) -> Vec<String> {
     patterns
         .as_ref()
@@ -208,15 +186,15 @@ fn parse_patterns(patterns: &Option<String>) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn get_git_diff_branch(args: &Cli, spinner: &ProgressBar) -> Result<String> {
-    if let Some(branches) = &args.git_diff_branch {
-        spinner.set_message("生成兩個分支之間的 git diff...");
-        let branches = parse_patterns(&Some(branches.to_string()));
+fn get_git_diff_branch(args: &Cli, template_content: &str) -> Result<String> {
+    if template_contains_variables(template_content, &["git_diff_branch"]) {
+        log::info!("生成兩個分支之間的 git diff...");
+        let branches = prompt_for_branches();
         if branches.len() != 2 {
             return Err(anyhow::anyhow!("請提供兩個分支，以逗號分隔。"));
         }
         Ok(
-            get_git_diff_between_branches(&args.path, &branches[0], &branches[1])
+            c2p::git::get_git_diff_between_branches(&args.path, &branches[0], &branches[1])
                 .unwrap_or_default(),
         )
     } else {
@@ -224,17 +202,17 @@ fn get_git_diff_branch(args: &Cli, spinner: &ProgressBar) -> Result<String> {
     }
 }
 
-fn get_git_log_branch(args: &Cli, spinner: &ProgressBar) -> Result<String> {
-    if let Some(branches) = &args.git_log_branch {
-        spinner.set_message("生成兩個分支之間的 git log...");
-        let branches = parse_patterns(&Some(branches.to_string()));
-        if branches.len() != 2 {
-            return Err(anyhow::anyhow!("請提供兩個分支，以逗號分隔。"));
-        }
-        Ok(get_git_log(&args.path, &branches[0], &branches[1]).unwrap_or_default())
-    } else {
-        Ok(String::new())
+
+fn get_git_log_date(path: &Path, template_content: &str) -> Result<String> {
+    if !template_contains_variables(template_content, &["git_log_date"]) {
+        return Ok(String::new());
     }
+
+    log::info!("正在獲取指定日期範圍的 git log...");
+    let date_range = prompt_for_date_range();
+
+    log::info!("正在處理 git log...");
+    c2p::git::get_git_log_by_date_range(path, &date_range)
 }
 
 fn print_json_output(
@@ -246,7 +224,7 @@ fn print_json_output(
 ) -> Result<()> {
     let json_output = json!({
         "prompt": rendered,
-        "directory_name": label(path),
+        "directory_name": c2p::path::label(path),
         "token_count": token_count,
         "model_info": model_info,
         "files": paths,
@@ -292,25 +270,66 @@ fn copy_to_clipboard_with_feedback(rendered: &str) {
     }
 }
 
+fn prompt_for_branches() -> Vec<String> {
+    let branch1 = Text::new("請輸入第一個分支名稱:")
+        .prompt()
+        .unwrap_or_default();
+    let branch2 = Text::new("請輸入第二個分支名稱:")
+        .prompt()
+        .unwrap_or_default();
+    vec![branch1, branch2]
+}
+
+// 添加新的函數來提示用戶輸入日期範圍
+fn prompt_for_date_range() -> String {
+    let start_date = Text::new("請輸入開始日期 (YYYY-MM-DD):")
+        .prompt()
+        .unwrap_or_default();
+    let end_date = Text::new("請輸入結束日期 (YYYY-MM-DD):")
+        .prompt()
+        .unwrap_or_default();
+    format!("{}..{}", start_date, end_date)
+}
+
+fn show_available_templates() -> Table {
+    let mut table = Table::new();
+    table.add_row(Row::new(vec![
+        Cell::new("No."),
+        Cell::new("Template Name"),
+        Cell::new("Template 用途"),
+    ]));
+
+    for (index, (template_name, _, description)) in TEMPLATES.iter().enumerate() {
+        table.add_row(Row::new(vec![
+            Cell::new(&(index + 1).to_string()),
+            Cell::new(template_name),
+            Cell::new(description),
+        ]));
+    }
+
+    table
+}
+
+fn select_template() -> Result<(String, String)> {
+    let table = show_available_templates();
+    table.printstd();
+
+    let options: Vec<&str> = TEMPLATES.iter().map(|(name, _, _)| *name).collect();
+    let selection = Select::new("請選擇一個模板:", options).prompt()?;
+
+    get_predefined_template(selection)
+}
+
 fn main() -> Result<()> {
-    env_logger::init();
+    Builder::new().filter_level(LevelFilter::Info).init();
     let args = Cli::parse();
 
     let (template_content, template_name) = if let Some(hbs_path) = &args.hbs {
         // 使用自定義模板文件
         get_custom_template(Path::new(hbs_path))?
-    } else if let Some(template_option) = &args.template {
-        match template_option {
-            Some(template_name) => {
-                // 使用預定義模板
-                get_predefined_template(template_name)?
-            }
-            None => {
-                // 當 -t 參數存在但沒有提供值時，顯示可用的模板並退出
-                show_available_templates();
-                std::process::exit(0);
-            }
-        }
+    } else if args.template.is_some() {
+        // 當 -t 參數存在時，顯示模板表格並讓用戶選擇
+        select_template()?
     } else {
         // 使用默認模板
         (
@@ -321,12 +340,12 @@ fn main() -> Result<()> {
 
     let handlebars = handlebars_setup(&template_content, &template_name)?;
 
-    let spinner = setup_spinner("遍歷目錄並構建樹...");
+    log::info!("遍歷目錄並構建樹...");
 
     let include_patterns = parse_patterns(&args.include);
     let exclude_patterns = parse_patterns(&args.exclude);
 
-    let (tree, files) = traverse_directory(
+    let (tree, files) = c2p::path::traverse_directory(
         &args.path,
         &include_patterns,
         &exclude_patterns,
@@ -337,23 +356,23 @@ fn main() -> Result<()> {
         args.no_codeblock,
     )
     .map_err(|e| {
-        spinner.finish_with_message("失敗!".red().to_string());
+        log::error!("失敗!");
         anyhow::anyhow!("無法構建目錄樹: {}", e)
     })?;
 
-    let git_diff = if args.diff {
-        spinner.set_message("生成 git diff...");
-        match get_git_diff(&args.path) {
+    let git_diff = if template_contains_variables(&template_content, &["git_diff"]) {
+        log::info!("生成 git diff...");
+        match c2p::git::get_git_diff(&args.path) {
             Ok(diff) => {
                 if diff.is_empty() {
-                    println!("沒有檢測到未暫存的更改。");
+                    log::info!("沒有檢測到未暫存的更改。");
                 } else {
-                    println!("成功獲取 git diff 的內容。");
+                    log::info!("成功獲取 git diff 的內容。");
                 }
                 diff
             }
             Err(e) => {
-                eprintln!("獲取 git diff 時出錯: {}", e);
+                log::error!("獲取 git diff 時出錯: {}", e);
                 String::new()
             }
         }
@@ -361,21 +380,21 @@ fn main() -> Result<()> {
         String::new()
     };
 
-    let git_diff_branch = get_git_diff_branch(&args, &spinner)?;
-    let git_log_branch = get_git_log_branch(&args, &spinner)?;
+    let git_diff_branch = get_git_diff_branch(&args, &template_content)?;
+    let git_log_date = get_git_log_date(&args.path, &template_content)?;
 
-    spinner.finish_with_message("完成!".green().to_string());
+    log::info!("完成!");
 
     let mut data = json!({
-        "absolute_code_path": label(&args.path),
+        "absolute_code_path": c2p::path::label(&args.path),
         "source_tree": tree,
         "files": files,
         "git_diff": git_diff,
         "git_diff_branch": git_diff_branch,
-        "git_log_branch": git_log_branch
+        "git_log_date": git_log_date
     });
 
-    debug!("JSON 數據: {}", serde_json::to_string_pretty(&data)?);
+    log::debug!("JSON 數據: {}", serde_json::to_string_pretty(&data)?);
 
     handle_undefined_variables(&mut data, &template_content)?;
 
@@ -386,7 +405,7 @@ fn main() -> Result<()> {
     }
 
     let token_count = if args.tokens {
-        let bpe = get_tokenizer(&args.encoding);
+        let bpe = c2p::token::get_tokenizer(&args.encoding);
         bpe.encode_with_special_tokens(&rendered).len()
     } else {
         0
@@ -397,7 +416,7 @@ fn main() -> Result<()> {
         .filter_map(|file| file.get("path").and_then(|p| p.as_str()).map(String::from))
         .collect();
 
-    let model_info = get_model_info(&args.encoding);
+    let model_info = c2p::token::get_model_info(&args.encoding);
 
     if args.json {
         print_json_output(&rendered, &args.path, token_count, &model_info, &paths)?;

@@ -1,4 +1,4 @@
-use c2p::git::{get_git_diff, get_git_diff_between_branches, get_git_log};
+use c2p::git::{get_git_diff, get_git_diff_between_branches};
 
 #[cfg(test)]
 mod tests {
@@ -252,16 +252,5 @@ mod tests {
                 .expect("Failed to find commit")],
         )
         .expect("Failed to commit second change in new branch");
-
-        // Get the git log between branches
-        let log = get_git_log(repo_path, "master", "development")
-            .expect("Failed to get git log between branches");
-
-        // Print the log for debugging
-        println!("Generated git log:\n{}", log);
-
-        // Assert that the log contains the expected content
-        assert!(log.contains("First commit in development"));
-        assert!(log.contains("Second commit in development"));
     }
 }
