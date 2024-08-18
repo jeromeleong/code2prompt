@@ -1,9 +1,4 @@
-name: Release Build
-
-env:
-  PROJECT_NAME: code2prompt
-  PROJECT_DESC: "A command-line tool to generate an LLM prompt from codebases of any size, fast."
-  PROJECT_AUTH: "mufeedvh"
+name: Build and Test
 
 on:
   release:
@@ -11,59 +6,62 @@ on:
 
 jobs:
   build:
-    name: Build
-    runs-on: ${{ matrix.job.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        job:
-          - { os: ubuntu-latest  , target: arm-unknown-linux-gnueabihf , use-cross: use-cross }
-          - { os: ubuntu-latest  , target: aarch64-unknown-linux-gnu   , use-cross: use-cross }
-          - { os: ubuntu-latest  , target: i686-unknown-linux-gnu      , use-cross: use-cross }
-          - { os: ubuntu-latest  , target: i686-unknown-linux-musl     , use-cross: use-cross }
-          - { os: ubuntu-latest  , target: x86_64-unknown-linux-gnu    , use-cross: use-cross }
-          - { os: ubuntu-latest  , target: x86_64-unknown-linux-musl   , use-cross: use-cross }
-          - { os: macos-latest   , target: x86_64-apple-darwin         }
-          - { os: macos-latest   , target: aarch64-apple-darwin        }
-          - { os: windows-latest , target: i686-pc-windows-gnu         }
-          - { os: windows-latest , target: i686-pc-windows-msvc        }
-          - { os: windows-latest , target: x86_64-pc-windows-gnu       }
-          - { os: windows-latest , target: x86_64-pc-windows-msvc      }
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        arch: [x64, arm64]
+        exclude:
+          - os: windows-latest
+            arch: arm64
+          - os: macos-latest
+            arch: arm64
+
     steps:
-    - uses: actions/checkout@v3
-    - name: Install Rust toolchain
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-        target: ${{ matrix.job.target }}
+        profile: minimal
         override: true
-        default: true
-    - name: Install musl tools (Linux)
-      if: contains(matrix.job.target, 'musl')
-      run: sudo apt-get update && sudo apt-get install -y musl-tools
-    - name: Install MinGW toolchain (Windows)
-      if: contains(matrix.job.target, 'windows-gnu')
-      uses: egor-tensin/setup-mingw@v2
+        target: ${{ matrix.arch }}-unknown-${{ matrix.os }}
+
+    - name: Cache cargo registry
+      uses: actions/cache@v2
       with:
-        platform: ${{ matrix.job.target }}
-    - name: Build release binary
-      uses: actions-rs/cargo@v1
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    - name: Cache cargo index
+      uses: actions/cache@v2
       with:
-        use-cross: ${{ matrix.job.use-cross }}
-        command: build
-        args: --release --target ${{ matrix.job.target }} --verbose
-      env:
-        OPENSSL_DIR: /usr/local/opt/openssl
-        PKG_CONFIG_ALLOW_CROSS: 1
-    - name: Strip release binary (Unix)
-      if: matrix.job.target != 'x86_64-pc-windows-msvc'
-      run: strip "target/${{ matrix.job.target }}/release/code2prompt"
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-index-
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.arch }}-unknown-${{ matrix.os }}
+
+    - name: Run tests
+      run: cargo test --release --target ${{ matrix.arch }}-unknown-${{ matrix.os }}
+
+    - name: Package binary
+      run: |
+        mkdir -p release
+        zip release/c2p-${{ matrix.arch }}-${{ matrix.os }}.zip target/release/c2p
+
     - name: Upload release asset
       uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: target/${{ matrix.job.target }}/release/code2prompt${{ matrix.job.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
-        asset_name: code2prompt-${{ matrix.job.target }}${{ matrix.job.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
-        asset_content_type: application/octet-stream
+        asset_path: release/c2p-${{ matrix.arch }}-${{ matrix.os }}.zip
+        asset_name: c2p-${{ matrix.arch }}-${{ matrix.os }}.zip
+        asset_content_type: application/zip

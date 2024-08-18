@@ -1,6 +1,6 @@
 //! This module handles git operations.
-use chrono::{DateTime, NaiveDate, Utc};
 use anyhow::{Context, Result};
+use chrono::{DateTime, NaiveDate, Utc};
 use git2::{Commit, DiffOptions, Repository};
 use log::info;
 use std::path::Path;
@@ -114,7 +114,7 @@ pub fn get_git_diff_between_branches(
 /// # Returns
 ///
 /// * `Result<String, git2::Error>` - The git log as a string or an error
-
+///
 /// Checks if a local branch exists in the given repository
 ///
 /// # Arguments
@@ -126,10 +126,8 @@ pub fn get_git_diff_between_branches(
 ///
 /// * `bool` - `true` if the branch exists, `false` otherwise
 fn branch_exists(repo: &Repository, branch_name: &str) -> bool {
-    match repo.find_branch(branch_name, git2::BranchType::Local) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    repo.find_branch(branch_name, git2::BranchType::Local)
+        .is_ok()
 }
 
 pub fn get_git_log_by_date_range(repo_path: &Path, date_range: &str) -> Result<String> {
@@ -138,13 +136,13 @@ pub fn get_git_log_by_date_range(repo_path: &Path, date_range: &str) -> Result<S
 
     let dates: Vec<&str> = date_range.split("..").collect();
     if dates.len() != 2 {
-        return Err(anyhow::anyhow!("無效的日期範圍格式,應為 'YYYY-MM-DD..YYYY-MM-DD'"));
+        return Err(anyhow::anyhow!(
+            "無效的日期範圍格式,應為 'YYYY-MM-DD..YYYY-MM-DD'"
+        ));
     }
 
-    let start_date = NaiveDate::parse_from_str(dates[0], "%Y-%m-%d")
-        .context("無法解析開始日期")?;
-    let end_date = NaiveDate::parse_from_str(dates[1], "%Y-%m-%d")
-        .context("無法解析結束日期")?;
+    let start_date = NaiveDate::parse_from_str(dates[0], "%Y-%m-%d").context("無法解析開始日期")?;
+    let end_date = NaiveDate::parse_from_str(dates[1], "%Y-%m-%d").context("無法解析結束日期")?;
 
     let mut revwalk = repo.revwalk().context("無法創建 revwalk")?;
     revwalk.push_head().context("無法推送 HEAD 到 revwalk")?;
@@ -157,9 +155,7 @@ pub fn get_git_log_by_date_range(repo_path: &Path, date_range: &str) -> Result<S
         let commit_time = commit.time().seconds();
         let commit_date = DateTime::<Utc>::from_timestamp(commit_time, 0)
             .map(|dt| dt.naive_utc().date())
-            .unwrap_or_else(|| {
-                NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
-            });
+            .unwrap_or_else(|| NaiveDate::from_ymd_opt(1970, 1, 1).unwrap());
 
         if commit_date >= start_date && commit_date <= end_date {
             log_text.push_str(&format_commit_with_diff(&repo, &commit)?);
@@ -176,21 +172,18 @@ fn format_commit_with_diff(repo: &Repository, commit: &Commit) -> Result<String>
     let mut output = String::new();
 
     // 添加提交信息
-    output.push_str(&format!(
-        "commit {}\n",
-        commit.id()
-    ));
-    output.push_str(&format!(
-        "Author: {}\n",
-        commit.author()
-    ));
+    output.push_str(&format!("commit {}\n", commit.id()));
+    output.push_str(&format!("Author: {}\n", commit.author()));
     output.push_str(&format!(
         "Date:   {}\n\n",
         DateTime::<Utc>::from_timestamp(commit.time().seconds(), 0)
             .unwrap()
             .format("%Y-%m-%d %H:%M:%S %z")
     ));
-    output.push_str(&format!("    {}\n\n", commit.message().unwrap_or("無提交信息")));
+    output.push_str(&format!(
+        "    {}\n\n",
+        commit.message().unwrap_or("無提交信息")
+    ));
 
     // 獲取變更內容
     let parent = if commit.parent_count() > 0 {

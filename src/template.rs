@@ -91,6 +91,8 @@ pub fn write_to_file(output_path: &str, rendered: &str) -> Result<()> {
 
 pub fn template_contains_variables(template_content: &str, variables: &[&str]) -> bool {
     let re = Regex::new(r"\{\{\s*([a-zA-Z_][a-zA-Z_0-9]*)\s*\}\}").unwrap();
-    let x = re.captures_iter(template_content)
-        .any(|cap| variables.contains(&&cap[1])); x
+    let x = re
+        .captures_iter(template_content)
+        .any(|cap| variables.contains(&&cap[1]));
+    x
 }

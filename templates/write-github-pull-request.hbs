@@ -15,35 +15,40 @@ Git diff:
 ```
 {{/if}}
 
-The Pull Request description should include the following template and adhere best practice:
+The Pull Request description should include the following template and adhere to best practices:
+```markdown
+Title: [Provide a concise and informative title]
+
+## What is this?
+- [Explain the motivation for this change and the expected outcome]
+- [Write in a clear, humanized manner]
+
+## Changes
+[Provide a structured list of key changes, mentioning relevant class names, function names, and file names. Explain code changes clearly.]
+
+### Added Features:
+1. **New Functions in `[file_name]`**:
+   - `[function_name]`: [Brief description of the function's purpose and implementation]
+
+### Code Changes:
+1. **In `[file_name]`**:
+   - [Describe significant code modifications, refactoring, or improvements]
+
+### Documentation Updates:
+1. **In `[file_name]`**:
+   - [Mention documentation changes without detailing specific content for README.md and CHANGELOG.md]
+
+## Demo
+[If applicable, provide instructions or links to demo the changes]
+
+## Context
+[Add any additional context or background information relevant to this pull request]
 ```
-Title: provide with concise and informative title.
 
-# What is this?
-- Explain the motivation why this is needed and the expected outcome of implementing this.
-- Write it in a humanized manner.
-
-# Changes
-- Provide list of key changes with good structure.
-- Mention the class name, function name, and file name.
-- Explain the code changes.
-For example:
-# Changes
-## Added Features:
-    1. **New Functions in `file_name.`**:
-        - `function_name.`: code description.
-## Code Changes:
-    1. **In `file_name.`**:
-## Documentation Updates:
-    1. **In `file_name.`**:
-
-# Demo
-- N/A
-
-# Context
-- N/A
-```
-
-Please, analyze the git diff and git log to understand the changes. Do not output git log and git diff to the content.
+Please analyze the git diff and git log to understand the changes. Do not output the git log and git diff in the content.
 Use your analysis of the code to generate accurate and helpful content, but also explain things clearly for users who may not be familiar with the implementation details.
 Write the content in Markdown format and follow the provided pull request template.
+
+For README.md and CHANGELOG.md, only mention that they were updated without providing details of the changes.
+
+Ensure that the description is clear, concise, and provides valuable information about the changes being proposed in the pull request.

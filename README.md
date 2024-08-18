@@ -14,7 +14,7 @@ c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時
     - 使用`-t <template name>`時，不需要填寫`.hbs`，如`-t write-git-commit` 即可
 - 移除 `-d / --diff` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容
 - 移除 `--git-diff-branch` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容，並用交互的方式獲取所需資料
-- 移除 `--git-log-branch` 配置，對我來說有點用不上，在Git.rs 直接移除了相關Function
+- 移除 `--git-log-branch` 配置，對我來說有點用不上，在git.rs 直接移除了相關Function
 
 ### 預定義的 Handlebars 模板文件的改動
 - 增加 `write-github-changelog-daily`，以每天總結一次的方式來總結所有提交

@@ -54,7 +54,7 @@ pub fn get_model_info(encoding: &Option<String>) -> &'static str {
 ///                Supported encodings: "o200k" (default), "cl100k", "p50k", "p50k_edit", "r50k", "gpt2".
 pub fn count_tokens(rendered: &str, encoding: &Option<String>) {
     let (bpe, model_info) = match encoding.as_deref().unwrap_or("o200k") {
-        "o200k" => (o200k_base(),"GPT-4o models"),
+        "o200k" => (o200k_base(), "GPT-4o models"),
         "cl100k" => (cl100k_base(), "ChatGPT models, text-embedding-ada-002"),
         "p50k" => (
             p50k_base(),
@@ -65,7 +65,7 @@ pub fn count_tokens(rendered: &str, encoding: &Option<String>) {
             "Edit models like text-davinci-edit-001, code-davinci-edit-001",
         ),
         "r50k" | "gpt2" => (r50k_base(), "GPT-3 models like davinci"),
-        _ => (o200k_base(),"GPT-4o models"),
+        _ => (o200k_base(), "GPT-4o models"),
     };
 
     let token_count = bpe.unwrap().encode_with_special_tokens(rendered).len();

@@ -6,8 +6,8 @@ use c2p::template::{
 use clap::Parser;
 use colored::*;
 use env_logger::Builder;
+use inquire::{Select, Text};
 use log::LevelFilter;
-use inquire::{Text, Select};
 use serde_json::json;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -94,7 +94,11 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
 ];
 
 #[derive(Parser)]
-#[clap(name = "c2p", version = "2.1.0", author = "Mufeed VH & Olivier D & Jerome Leong")]
+#[clap(
+    name = "c2p",
+    version = "2.1.1",
+    author = "Mufeed VH & Olivier D & Jerome Leong"
+)]
 struct Cli {
     /// Path to the codebase directory
     #[arg()]
@@ -197,7 +201,6 @@ fn get_git_diff_branch(args: &Cli, template_content: &str) -> Result<String> {
     }
 }
 
-
 fn get_git_log_date(path: &Path, template_content: &str) -> Result<String> {
     if !template_contains_variables(template_content, &["git_log_date"]) {
         return Ok(String::new());
@@ -285,7 +288,11 @@ fn prompt_for_date_range() -> String {
 }
 
 fn select_template() -> Result<(String, String)> {
-    let max_name_length = TEMPLATES.iter().map(|(name, _, _)| name.len()).max().unwrap_or(0);
+    let max_name_length = TEMPLATES
+        .iter()
+        .map(|(name, _, _)| name.len())
+        .max()
+        .unwrap_or(0);
 
     let options: Vec<String> = TEMPLATES
         .iter()
@@ -298,7 +305,12 @@ fn select_template() -> Result<(String, String)> {
     let selection = Select::new("請選擇一個模板:", options).prompt()?;
 
     // 從選擇中提取模板名稱
-    let template_name = selection.split(" - ").next().unwrap_or_default().trim().to_string();
+    let template_name = selection
+        .split(" - ")
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_string();
 
     get_predefined_template(&template_name)
 }
@@ -390,7 +402,7 @@ fn main() -> Result<()> {
         rendered.push_str(&format!("\nYou must use {} language to reply", lang));
     }
 
-    let token_count =  {
+    let token_count = {
         let bpe = c2p::token::get_tokenizer(&args.encoding);
         bpe.encode_with_special_tokens(&rendered).len()
     };
@@ -403,12 +415,12 @@ fn main() -> Result<()> {
     let model_info = c2p::token::get_model_info(&args.encoding);
 
     let rendered = if args.json {
-        print_json_output(&rendered, &args.path, token_count, &model_info, &paths)?
+        print_json_output(&rendered, &args.path, token_count, model_info, &paths)?
     } else {
         rendered
     };
 
-    print_normal_output(token_count, &model_info);
+    print_normal_output(token_count, model_info);
 
     if !args.no_clipboard {
         copy_to_clipboard_with_feedback(&rendered);
