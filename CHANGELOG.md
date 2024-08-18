@@ -1,5 +1,36 @@
 # 變更日誌
 
+## 日期: 2024-08-18
+
+### 變更摘要
+- 更新主程式和令牌計數模組以支援 o200k 編碼。
+- 更新專案配置和文檔。
+
+### 詳細變更
+
+#### 新增
+- 引入新的 o200k 編碼選項。
+- 新增 `write-github-changelog-daily` 和 `write-github-changelog-biweekly` 模板，以每天和每兩周總結一次的方式來總結所有提交。
+- 新增 `git_log_date` 變量，等同於 `git log -p --since="YYYY-MM-DD" --until="YYYY-MM-DD"`，相關日期會通過交互的方式要求使用者填寫。
+
+#### 修改
+- 重構 `token.rs` 以支援多種編碼。
+- 更新 `README.md` 以反映最新的命令行配置選項。
+- 更新 `git.rs` 以支持新的 Git log 和 diff 功能。
+- 優化模板文件以支持新的 Handlebars 變量。
+- 修改 `write-git-commit` 模板，根據 [opencommit](https://github.com/di-sukharev/opencommit/) 項目的 Prompt 來進行修改。
+
+#### 移除
+- 移除 `-d / --diff` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容。
+- 移除 `--git-diff-branch` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容，並用交互的方式獲取所需資料。
+- 移除 `--git-log-branch` 配置，對我來說有點用不上，在 `Git.rs` 直接移除了相關 Function。
+
+#### 修復
+- 修正了 `main.rs` 中模板數據的重複定義。
+
+### 貢獻者
+- Jerome <jeromeleong1998@gmail.com>
+
 ## 日期: 2024-08-17
 
 ### 變更摘要
