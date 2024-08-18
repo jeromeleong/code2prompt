@@ -5,6 +5,12 @@ c2p 是根據[code2prompt](https://github.com/mufeedvh/code2prompt)修改的自�
 c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時發現的小問題。
 
 ## 主要的改動（2024-08-18）
+### 命令行的改動
+- 移除 `c2p <path>` 命令，因為增加另的子命令，所以這個命令需要轉為子命令
+
+### 命令行子命令的改動
+- 增加 `c2p clone <url>` 子命令，此功能會將網上的項目`clone`到臨時文件夾並進行提示生成處理。
+- 增加 `c2p path <path>` 子命令，等於原來的`c2p <path>`
 
 ### 命令行配置的改動
 - 增加 `-l / --lang` 配置，設定AI 回答的語言，如`--lang zh-hant`是使用繁體中文回答
@@ -15,6 +21,7 @@ c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時
 - 移除 `-d / --diff` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容
 - 移除 `--git-diff-branch` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容，並用交互的方式獲取所需資料
 - 移除 `--git-log-branch` 配置，對我來說有點用不上，在git.rs 直接移除了相關Function
+- 移除 `--token` 配置，因為已經是標配，只能為 True
 
 ### 預定義的 Handlebars 模板文件的改動
 - 增加 `write-github-changelog-daily`，以每天總結一次的方式來總結所有提交

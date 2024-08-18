@@ -1,8 +1,4 @@
 use anyhow::{Context, Result};
-use c2p::template::{
-    copy_to_clipboard, handle_undefined_variables, handlebars_setup, render_template,
-    template_contains_variables, write_to_file,
-};
 use clap::Parser;
 use colored::*;
 use env_logger::Builder;
@@ -10,7 +6,13 @@ use inquire::{Select, Text};
 use log::LevelFilter;
 use serde_json::json;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use tempfile::TempDir;
+use git2::Repository;
+use handlebars::Handlebars;
+use regex::Regex;
+use arboard::Clipboard;
 
 const DEFAULT_TEMPLATE_NAME: &str = "default";
 const CUSTOM_TEMPLATE_NAME: &str = "custom";
@@ -96,14 +98,30 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
 #[derive(Parser)]
 #[clap(
     name = "c2p",
-    version = "2.1.1",
+    version = "2.2.0",
     author = "Mufeed VH & Olivier D & Jerome Leong"
 )]
 struct Cli {
-    /// Path to the codebase directory
-    #[arg()]
-    path: PathBuf,
+    #[clap(subcommand)]
+    command: Commands,
+}
 
+#[derive(Parser)]
+enum Commands {
+    Clone {
+        url: String,
+        #[clap(flatten)]
+        args: Args,
+    },
+    Path {
+        path: PathBuf,
+        #[clap(flatten)]
+        args: Args,
+    },
+}
+
+#[derive(Parser)]
+struct Args {
     /// Patterns to include
     #[clap(long)]
     include: Option<String>,
@@ -163,6 +181,140 @@ struct Cli {
     lang: Option<String>,
 }
 
+fn main() -> Result<()> {
+    Builder::new().filter_level(LevelFilter::Info).init();
+    let args = Cli::parse();
+    
+    match &args.command {
+        Commands::Clone { url, args } => {
+            let temp_dir = TempDir::new()?;
+            let repo_path = temp_dir.path();
+            Repository::clone(&url, repo_path)?;
+            process_path(repo_path, args)?;
+        }
+        Commands::Path { path, args } => {
+            process_path(&path, args)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn process_path(path: &Path, args: &Args) -> Result<()> {
+    let (template_content, template_name) = if let Some(hbs_path) = &args.hbs {
+        // 使用自定義模板文件
+        get_custom_template(Path::new(hbs_path))?
+    } else if let Some(Some(template_name)) = &args.template {
+        // 直接使用 -t <template name> 指定的模板s
+        get_predefined_template(template_name)?
+    } else if args.template.is_some() {
+        // 當 -t 參數存在時，顯示模板表格並讓用戶選擇
+        select_template()?
+    } else {
+        // 使用默認模板
+        (
+            include_str!("default_template.hbs").to_string(),
+            DEFAULT_TEMPLATE_NAME.to_string(),
+        )
+    };
+
+    let handlebars = handlebars_setup(&template_content, &template_name)?;
+
+    log::info!("遍歷目錄並構建樹...");
+
+    let include_patterns = parse_patterns(&args.include);
+    let exclude_patterns = parse_patterns(&args.exclude);
+
+    let (tree, files) = c2p::path::traverse_directory(
+        path,
+        &include_patterns,
+        &exclude_patterns,
+        args.include_priority,
+        args.line_number,
+        args.relative_paths,
+        args.exclude_from_tree,
+        args.no_codeblock,
+    )
+    .map_err(|e| {
+        log::error!("失敗!");
+        anyhow::anyhow!("無法構建目錄樹: {}", e)
+    })?;
+
+    let git_diff = if template_contains_variables(&template_content, &["git_diff"]) {
+        log::info!("生成 git diff...");
+        match c2p::git::get_git_diff(path) {
+            Ok(diff) => {
+                if diff.is_empty() {
+                    log::info!("沒有檢測到未暫存的更改。");
+                } else {
+                    log::info!("成功獲取 git diff 的內容。");
+                }
+                diff
+            }
+            Err(e) => {
+                log::error!("獲取 git diff 時出錯: {}", e);
+                String::new()
+            }
+        }
+    } else {
+        String::new()
+    };
+
+    let git_diff_branch = get_git_diff_branch(args, &template_content)?;
+    let git_log_date = get_git_log_date(path, &template_content)?;
+
+    log::info!("完成!");
+
+    let mut data = json!({
+        "absolute_code_path": c2p::path::label(path),
+        "source_tree": tree,
+        "files": files,
+        "git_diff": git_diff,
+        "git_diff_branch": git_diff_branch,
+        "git_log_date": git_log_date
+    });
+
+    log::debug!("JSON 數據: {}", serde_json::to_string_pretty(&data)?);
+
+    handle_undefined_variables(&mut data, &template_content)?;
+
+    let mut rendered = render_template(&handlebars, &template_name, &data)?;
+
+    if let Some(lang) = &args.lang {
+        rendered.push_str(&format!("\nYou must use {} language to reply", lang));
+    }
+
+    let token_count = {
+        let bpe = c2p::token::get_tokenizer(&args.encoding);
+        bpe.encode_with_special_tokens(&rendered).len()
+    };
+
+    let paths: Vec<String> = files
+        .iter()
+        .filter_map(|file| file.get("path").and_then(|p| p.as_str()).map(String::from))
+        .collect();
+
+    let model_info = c2p::token::get_model_info(&args.encoding);
+
+    let rendered = if args.json {
+        print_json_output(&rendered, path, token_count, model_info, &paths)?
+    } else {
+        rendered
+    };
+
+    print_normal_output(token_count, model_info);
+
+    if !args.no_clipboard {
+        copy_to_clipboard_with_feedback(&rendered);
+    }
+
+    if let Some(output_path) = &args.output {
+        write_to_file(output_path, &rendered)?;
+    }
+
+    Ok(())
+}
+
 fn get_predefined_template(template_name: &str) -> Result<(String, String)> {
     TEMPLATES
         .iter()
@@ -185,7 +337,7 @@ fn parse_patterns(patterns: &Option<String>) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn get_git_diff_branch(args: &Cli, template_content: &str) -> Result<String> {
+fn get_git_diff_branch(args: &Args, template_content: &str) -> Result<String> {
     if template_contains_variables(template_content, &["git_diff_branch"]) {
         log::info!("生成兩個分支之間的 git diff...");
         let branches = prompt_for_branches();
@@ -193,11 +345,17 @@ fn get_git_diff_branch(args: &Cli, template_content: &str) -> Result<String> {
             return Err(anyhow::anyhow!("請提供兩個分支，以逗號分隔。"));
         }
         Ok(
-            c2p::git::get_git_diff_between_branches(&args.path, &branches[0], &branches[1])
+            c2p::git::get_git_diff_between_branches(get_path_from_args(args)?, &branches[0], &branches[1])
                 .unwrap_or_default(),
         )
     } else {
         Ok(String::new())
+    }
+}
+
+fn get_path_from_args(args: &Args) -> Result<&Path> {
+    match args {
+        Args { .. } => Err(anyhow::anyhow!("Path not available for clone command")),
     }
 }
 
@@ -215,7 +373,7 @@ fn get_git_log_date(path: &Path, template_content: &str) -> Result<String> {
 
 fn print_json_output(
     rendered: &str,
-    path: &PathBuf,
+    path: &Path,
     token_count: usize,
     model_info: &str,
     paths: &[String],
@@ -276,7 +434,6 @@ fn prompt_for_branches() -> Vec<String> {
     vec![branch1, branch2]
 }
 
-// 添加新的函數來提示用戶輸入日期範圍
 fn prompt_for_date_range() -> String {
     let start_date = Text::new("請輸入開始日期 (YYYY-MM-DD):")
         .prompt()
@@ -315,120 +472,93 @@ fn select_template() -> Result<(String, String)> {
     get_predefined_template(&template_name)
 }
 
-fn main() -> Result<()> {
-    Builder::new().filter_level(LevelFilter::Info).init();
-    let args = Cli::parse();
+fn handlebars_setup(template_str: &str, template_name: &str) -> Result<Handlebars<'static>> {
+    let mut handlebars = Handlebars::new();
+    handlebars.register_escape_fn(handlebars::no_escape);
 
-    let (template_content, template_name) = if let Some(hbs_path) = &args.hbs {
-        // 使用自定義模板文件
-        get_custom_template(Path::new(hbs_path))?
-    } else if let Some(Some(template_name)) = &args.template {
-        // 直接使用 -t <template name> 指定的模板
-        get_predefined_template(template_name)?
-    } else if args.template.is_some() {
-        // 當 -t 參數存在時，顯示模板表格並讓用戶選擇
-        select_template()?
-    } else {
-        // 使用默認模板
-        (
-            include_str!("default_template.hbs").to_string(),
-            DEFAULT_TEMPLATE_NAME.to_string(),
-        )
-    };
+    handlebars
+        .register_template_string(template_name, template_str)
+        .map_err(|e| anyhow::anyhow!("Failed to register template: {}", e))?;
 
-    let handlebars = handlebars_setup(&template_content, &template_name)?;
+    Ok(handlebars)
+}
 
-    log::info!("遍歷目錄並構建樹...");
+fn extract_undefined_variables(template: &str) -> Vec<String> {
+    let registered_identifiers = ["path", "code", "git_diff"];
+    let re = Regex::new(r"\{\{\s*(?P<var>[a-zA-Z_][a-zA-Z_0-9]*)\s*\}\}").unwrap();
+    re.captures_iter(template)
+        .map(|cap| cap["var"].to_string())
+        .filter(|var| !registered_identifiers.contains(&var.as_str()))
+        .collect()
+}
 
-    let include_patterns = parse_patterns(&args.include);
-    let exclude_patterns = parse_patterns(&args.exclude);
+fn render_template(
+    handlebars: &Handlebars,
+    template_name: &str,
+    data: &serde_json::Value,
+) -> Result<String> {
+    let rendered = handlebars
+        .render(template_name, data)
+        .map_err(|e| anyhow::anyhow!("Failed to render template: {}", e))?;
+    Ok(rendered.trim().to_string())
+}
 
-    let (tree, files) = c2p::path::traverse_directory(
-        &args.path,
-        &include_patterns,
-        &exclude_patterns,
-        args.include_priority,
-        args.line_number,
-        args.relative_paths,
-        args.exclude_from_tree,
-        args.no_codeblock,
-    )
-    .map_err(|e| {
-        log::error!("失敗!");
-        anyhow::anyhow!("無法構建目錄樹: {}", e)
-    })?;
+fn handle_undefined_variables(
+    data: &mut serde_json::Value,
+    template_content: &str,
+) -> Result<()> {
+    let undefined_variables = extract_undefined_variables(template_content);
+    let mut user_defined_vars = serde_json::Map::new();
 
-    let git_diff = if template_contains_variables(&template_content, &["git_diff"]) {
-        log::info!("生成 git diff...");
-        match c2p::git::get_git_diff(&args.path) {
-            Ok(diff) => {
-                if diff.is_empty() {
-                    log::info!("沒有檢測到未暫存的更改。");
-                } else {
-                    log::info!("成功獲取 git diff 的內容。");
-                }
-                diff
-            }
-            Err(e) => {
-                log::error!("獲取 git diff 時出錯: {}", e);
-                String::new()
-            }
+    for var in undefined_variables.iter() {
+        if !data.as_object().unwrap().contains_key(var) {
+            let prompt = format!("Enter value for '{}': ", var);
+            let answer = Text::new(&prompt)
+                .with_help_message("Fill user defined variable in template")
+                .prompt()
+                .unwrap_or_default();
+            user_defined_vars.insert(var.clone(), serde_json::Value::String(answer));
         }
-    } else {
-        String::new()
-    };
-
-    let git_diff_branch = get_git_diff_branch(&args, &template_content)?;
-    let git_log_date = get_git_log_date(&args.path, &template_content)?;
-
-    log::info!("完成!");
-
-    let mut data = json!({
-        "absolute_code_path": c2p::path::label(&args.path),
-        "source_tree": tree,
-        "files": files,
-        "git_diff": git_diff,
-        "git_diff_branch": git_diff_branch,
-        "git_log_date": git_log_date
-    });
-
-    log::debug!("JSON 數據: {}", serde_json::to_string_pretty(&data)?);
-
-    handle_undefined_variables(&mut data, &template_content)?;
-
-    let mut rendered = render_template(&handlebars, &template_name, &data)?;
-
-    if let Some(lang) = &args.lang {
-        rendered.push_str(&format!("\nYou must use {} language to reply", lang));
     }
 
-    let token_count = {
-        let bpe = c2p::token::get_tokenizer(&args.encoding);
-        bpe.encode_with_special_tokens(&rendered).len()
-    };
-
-    let paths: Vec<String> = files
-        .iter()
-        .filter_map(|file| file.get("path").and_then(|p| p.as_str()).map(String::from))
-        .collect();
-
-    let model_info = c2p::token::get_model_info(&args.encoding);
-
-    let rendered = if args.json {
-        print_json_output(&rendered, &args.path, token_count, model_info, &paths)?
-    } else {
-        rendered
-    };
-
-    print_normal_output(token_count, model_info);
-
-    if !args.no_clipboard {
-        copy_to_clipboard_with_feedback(&rendered);
+    if let Some(obj) = data.as_object_mut() {
+        for (key, value) in user_defined_vars {
+            obj.insert(key, value);
+        }
     }
-
-    if let Some(output_path) = &args.output {
-        write_to_file(output_path, &rendered)?;
-    }
-
     Ok(())
+}
+
+fn copy_to_clipboard(rendered: &str) -> Result<()> {
+    match Clipboard::new() {
+        Ok(mut clipboard) => {
+            clipboard
+                .set_text(rendered.to_string())
+                .context("Failed to copy to clipboard")?;
+            Ok(())
+        }
+        Err(e) => Err(anyhow::anyhow!("Failed to initialize clipboard: {}", e)),
+    }
+}
+
+fn write_to_file(output_path: &str, rendered: &str) -> Result<()> {
+    let file = std::fs::File::create(output_path)?;
+    let mut writer = std::io::BufWriter::new(file);
+    write!(writer, "{}", rendered)?;
+    println!(
+        "{}{}{} {}",
+        "[".bold().white(),
+        "✓".bold().green(),
+        "]".bold().white(),
+        format!("Prompt written to file: {}", output_path).green()
+    );
+    Ok(())
+}
+
+fn template_contains_variables(template_content: &str, variables: &[&str]) -> bool {
+    let re = Regex::new(r"\{\{\s*([a-zA-Z_][a-zA-Z_0-9]*)\s*\}\}").unwrap();
+    let x = re
+        .captures_iter(template_content)
+        .any(|cap| variables.contains(&&cap[1]));
+    x
 }
