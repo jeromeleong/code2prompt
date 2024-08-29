@@ -113,7 +113,7 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
 #[derive(Parser)]
 #[clap(
     name = "c2p",
-    version = "2.2.0",
+    version = "2.2.1",
     author = "Mufeed VH & Olivier D & Jerome Leong"
 )]
 struct Cli {

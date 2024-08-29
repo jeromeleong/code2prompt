@@ -188,7 +188,7 @@ pub fn get_git_log_by_date_range(repo_path: &Path, date_range: &str) -> Result<S
 fn format_commit_with_diff(repo: &Repository, commit: &Commit) -> Result<String> {
     let mut output = String::new();
 
-    // 添加提交信息
+    // Add commit information
     output.push_str(&format!("commit {}\n", commit.id()));
     output.push_str(&format!("Author: {}\n", commit.author()));
     output.push_str(&format!(
@@ -202,7 +202,7 @@ fn format_commit_with_diff(repo: &Repository, commit: &Commit) -> Result<String>
         commit.message().unwrap_or("無提交信息")
     ));
 
-    // 獲取變更內容
+    // Get changes
     let parent = if commit.parent_count() > 0 {
         Some(commit.parent(0)?)
     } else {
@@ -219,14 +219,28 @@ fn format_commit_with_diff(repo: &Repository, commit: &Commit) -> Result<String>
         Some(&mut diff_opts),
     )?;
 
-    // 將差異轉換為文本
-    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
-        let content = std::str::from_utf8(line.content()).unwrap_or("無法解碼的內容");
-        match line.origin() {
-            '+' | '-' | ' ' => output.push(line.origin()),
-            _ => {}
+    // Convert diff to text
+    diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
+        let file_name = delta.new_file().path()
+            .and_then(|p| p.file_name())
+            .and_then(|f| f.to_str())
+            .unwrap_or("");
+        let is_ignored_file = file_name.eq_ignore_ascii_case("readme.md") || file_name.eq_ignore_ascii_case("changelog.md");
+
+        if line.origin() == 'F' {
+            // Always show file header
+            let new_file = delta.new_file();
+            let old_file = delta.old_file();
+            if let (Some(old_path), Some(new_path)) = (old_file.path(), new_file.path()) {
+                output.push_str(&format!("diff --git a/{} b/{}\n", 
+                    old_path.display(), new_path.display()));
+            }
+        } else if !is_ignored_file && (line.origin() == '+' || line.origin() == '-' || line.origin() == ' ') {
+            // Only include non-ignored file changes
+            let content = std::str::from_utf8(line.content()).unwrap_or("無法解碼的內容");
+            output.push(line.origin());
+            output.push_str(content);
         }
-        output.push_str(content);
         true
     })?;
 
