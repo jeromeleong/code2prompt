@@ -1,6 +1,6 @@
 [package]
 name = "c2p"
-version = "2.2.1"
+version = "2.3.0"
 authors = ["Mufeed VH <mufeed@lyminal.space>","Olivier D'Ancona <olivier.dancona@master.hes-so.ch>","Jerome Leong <jeromeleong1998@gmail.com>"]
 description = "A command-line (CLI) tool to generate an LLM prompt from codebases of any size, fast."
 keywords = ["code", "prompt", "llm", "gpt", "ai"]
@@ -24,7 +24,7 @@ clap = { version = "4.0", features = ["derive"] }
 handlebars = "6.0.0"
 jwalk = "0.8"
 termtree = "0.5.1"
-serde_json = "1.0.114"
+serde_json = "1.0.0"
 indicatif = "0.17.8"
 colored = "2.1.0"
 tiktoken-rs = "0.5.8"

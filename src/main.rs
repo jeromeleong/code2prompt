@@ -118,7 +118,7 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
 #[derive(Parser)]
 #[clap(
     name = "c2p",
-    version = "2.2.1",
+    version = "2.3.0",
     author = "Mufeed VH & Olivier D & Jerome Leong"
 )]
 struct Cli {
@@ -143,11 +143,11 @@ enum Commands {
 #[derive(Parser)]
 struct Args {
     /// Patterns to include
-    #[clap(short, long)]
-    include: Option<String>,
+    #[clap(short, long="in", visible_alias = "include")]
+    include : Option<String>,
 
     /// Patterns to exclude
-    #[clap(short, long)]
+    #[clap(short, long="nor", visible_alias = "exclude")]
     exclude: Option<String>,
 
     /// Include files in case of conflict between include and exclude patterns
@@ -293,9 +293,15 @@ fn process_path(path: &Path, args: &Args) -> Result<()> {
 
     handle_undefined_variables(&mut data, &template_content)?;
 
+    let lang = if let Some(lang) = &args.lang {
+        lang.clone()
+    } else {
+        select_language()?
+    };
+
     let mut rendered = render_template(&handlebars, &template_name, &data)?;
 
-    if let Some(lang) = &args.lang {
+    if !lang.is_empty() {
         rendered.push_str(&format!("\nYou must use {} language to reply", lang));
     }
 
@@ -347,7 +353,6 @@ fn get_custom_template(template_path: &Path) -> Result<(String, String)> {
 fn parse_patterns(patterns: &Option<String>) -> Vec<String> {
     patterns
         .as_ref()
-        .filter(|p| !p.is_empty())
         .map(|p| p.split(',').map(str::trim).map(String::from).collect())
         .unwrap_or_default()
 }
@@ -486,6 +491,33 @@ fn select_template() -> Result<(String, String)> {
         .to_string();
 
     get_predefined_template(&template_name)
+}
+
+fn select_language() -> Result<String> {
+    let options = vec![
+        "zh-hant (繁體中文)",
+        "zh-hans (简体中文)",
+        "en (English)",
+        "ja (日本語)",
+        "es (Español)",
+        "fr (Français)",
+        "de (Deutsch)",
+        "ru (Русский)",
+        "ar (العربية)",
+        "pt (Português)",
+        "ko (한국어)",
+        "it (Italiano)",
+        "nl (Nederlands)",
+        "pl (Polski)",
+        "tr (Türkçe)",
+        "vi (Tiếng Việt)",
+        "th (ไทย)",
+        "id (Bahasa Indonesia)",
+    ];
+
+    let selection = Select::new("請選擇回覆使用的語言:", options).prompt()?;
+
+    Ok(selection.split_whitespace().next().unwrap_or("").to_string())
 }
 
 fn handlebars_setup(template_str: &str, template_name: &str) -> Result<Handlebars<'static>> {
