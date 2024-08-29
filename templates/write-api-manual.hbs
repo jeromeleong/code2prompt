@@ -1,0 +1,93 @@
+System: You are an intelligent API documentation expert, powered by GPT-4. You are here to assist in creating comprehensive and user-friendly API documentation.
+Create detailed API documentation for [API Name]. This documentation should focus on API usage, excluding implementation details. Generate the content in Markdown format, with the following structure:
+
+Project Path: {{ absolute_code_path }}
+
+Source Tree:
+```
+{{ source_tree }}
+```
+
+{{#each files}}
+{{#if code}}
+`{{path}}`:
+
+{{code}}
+
+{{/if}}
+{{/each}}
+
+---
+
+# [API Name] Documentation
+## Table of Contents
+1. Introduction
+2. Authentication
+3. API Endpoints Overview
+4. Request/Response Formats
+5. Endpoint Details
+6. Error Handling
+7. Rate Limiting
+8. Changelog
+9. Glossary
+
+## 1. Introduction
+[Provide a brief overview of the API and its main purposes]
+
+## 2. Authentication
+[Explain the authentication method(s) used by the API]
+
+```
+Authentication example:
+[code snippet]
+```
+
+## 3. API Endpoints Overview
+[List all available endpoints with brief descriptions]
+
+## 4. Request/Response Formats
+[Describe the general format for requests and responses, including headers and data structures]
+
+## 5. Endpoint Details
+[For each endpoint, provide detailed information]
+
+### 5.1 [Endpoint Name]
+- Method: [GET/POST/PUT/DELETE/etc.]
+- URL: `[endpoint URL]`
+- Description: [Detailed explanation of the endpoint's purpose and behavior]
+
+#### Parameters
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| param1 | string | Yes | Description of param1 |
+| param2 | integer | No | Description of param2 |
+
+#### Request Example
+```
+[HTTP request example]
+```
+
+#### Response Example
+```json
+{
+  "key": "value"
+}
+```
+
+## 6. Error Handling
+[Describe common error codes and their meanings]
+
+| Error Code | Meaning |
+|------------|---------|
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 404 | Not Found |
+
+## 7. Rate Limiting
+[Explain any rate limiting policies and how to handle them]
+
+## 8. Changelog
+[List recent changes to the API]
+
+## 9. Glossary
+[Define key terms and concepts used throughout the documentation]

@@ -54,6 +54,11 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
         "撰寫操作手冊",
     ),
     (
+        "write-api-manual",
+        include_str!("../templates/write-api-manual.hbs"),
+        "撰寫API手冊",
+    ),
+    (
         "write-maintenance-manual",
         include_str!("../templates/write-maintenance-manual.hbs"),
         "撰寫維護手冊",
@@ -62,6 +67,11 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
         "document-the-code",
         include_str!("../templates/document-the-code.hbs"),
         "為代碼生成注䆁",
+    ),
+    (
+        "refactor",
+        include_str!("../templates/refactor.hbs"),
+        "重構代碼項目",
     ),
     (
         "find-security-vulnerabilities",
@@ -102,11 +112,6 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
         "improve-performance",
         include_str!("../templates/improve-performance.hbs"),
         "提升性能",
-    ),
-    (
-        "refactor",
-        include_str!("../templates/refactor.hbs"),
-        "重構代碼項目",
     ),
 ];
 
