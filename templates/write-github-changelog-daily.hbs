@@ -10,25 +10,77 @@ Git log for the period:
 ```
 {{/if}}
 
-Generate the CHANGELOG content in a code block for easy distinction and copying. The CHANGELOG should include the following sections:
+Guidelines for generating the daily CHANGELOG:
 
-1. **Date**: YYYY-MM-DD
-2. **Summary of Changes**: Brief overview of the main changes and updates made on this date.
-3. **Detailed Changes**:
-   - **Added**: New features, files, or functionalities
-   - **Changed**: Modifications to existing features or files
-   - **Deprecated**: Features or functionalities marked for future removal
-   - **Removed**: Features, files, or functionalities that have been removed
-   - **Fixed**: Bug fixes
-   - **Security**: Security-related fixes or improvements
-4. **Contributors**: List of contributors who made changes on this date
+1. Present the CHANGELOG content within a code block for easy distinction and copying.
 
-Guidelines:
-- Exclude all content related to README.md and CHANGELOG.md from the CHANGELOG.
-- Provide accurate and helpful content based on your analysis of the git log and git diff.
-- Explain changes clearly for users who may not be familiar with implementation details.
-- Avoid redundancy in listings.
-- Infer reasonable details if needed, but prioritize information from the git log and git diff.
-- Ensure the CHANGELOG is professional, factual, and not fictitious.
+2. Generate a CHANGELOG only if there are changes on the specified date. If there are no changes, output a message stating "No changes on this date" and do not generate a CHANGELOG.
 
-Present the CHANGELOG in Markdown format within a code block. If you have any questions while generating the CHANGELOG, please ask.
+3. Include the following sections in the CHANGELOG:
+   - **Date**: YYYY-MM-DD
+   - **Summary of Changes**: Brief overview of significant updates
+   - **Detailed Changes**:
+     - Added
+     - Changed
+     - Deprecated
+     - Removed
+     - Fixed
+     - Security
+   - **Contributors**: List of contributors for this date
+
+4. For the Summary and Detailed Changes:
+   - Focus on significant, user-facing changes
+   - Avoid redundancy and overly technical details
+   - Use clear, concise language
+
+5. Exclude all content related to README.md and CHANGELOG.md from the CHANGELOG details.
+
+6. Use proper Markdown formatting for improved readability.
+
+7. Base the content on your analysis of the git log and git diff, inferring reasonable details if necessary.
+
+8. Explain changes clearly for users unfamiliar with implementation details.
+
+9. Ensure the CHANGELOG is professional, factual, and not fictitious.
+
+Present the CHANGELOG in this format:
+
+```markdown
+# CHANGELOG
+
+## [YYYY-MM-DD]
+
+### Summary of Changes
+[Brief overview of main updates]
+
+### Detailed Changes
+
+#### Added
+- [List of new features or functionalities]
+
+#### Changed
+- [List of modifications to existing features]
+
+#### Deprecated
+- [List of features marked for future removal]
+
+#### Removed
+- [List of removed features or functionalities]
+
+#### Fixed
+- [List of bug fixes]
+
+#### Security
+- [List of security-related improvements]
+
+### Contributors
+- [List of contributors]
+```
+
+If there are no changes on the specified date, output:
+
+```
+No changes on [YYYY-MM-DD]
+```
+
+Generate CHANGELOGs for all applicable daily periods, starting from the latest date in the git log to the earliest date. Separate each CHANGELOG with a horizontal line (---) for clarity.

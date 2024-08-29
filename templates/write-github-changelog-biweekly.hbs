@@ -1,5 +1,5 @@
 System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
-Generate a high-quality bi-weekly CHANGELOG for this project, suitable for GitHub hosting. Analyze the provided git log to understand changes made during the specified period.
+Generate high-quality bi-weekly CHANGELOGs for this project, suitable for GitHub hosting. Analyze the provided git log to understand changes made during the specified period.
 
 Project Path: {{ absolute_code_path }}
 
@@ -10,11 +10,19 @@ Git log for the period:
 ```
 {{/if}}
 
-Guidelines for generating the CHANGELOG:
+Guidelines for generating the CHANGELOGs:
 
-1. Present the CHANGELOG content within a code block for easy distinction and copying.
+1. Generate CHANGELOGs for all bi-weekly periods covered by the git log.
 
-2. Include the following sections:
+2. Use fixed date ranges for each period:
+   - First half of the month: YYYY-MM-01 to YYYY-MM-14
+   - Second half of the month: YYYY-MM-15 to YYYY-MM-30/31 (or 28/29 for February)
+
+3. If there are no logs for a specific fixed date range, skip generating a CHANGELOG for that period.
+
+4. Present each CHANGELOG content within a code block for easy distinction and copying.
+
+5. For each period, include the following sections:
    - **Date Range**: [Start date] to [End date]
    - **Summary of Changes**: Brief overview of significant updates
    - **Detailed Changes**:
@@ -26,22 +34,22 @@ Guidelines for generating the CHANGELOG:
      - Security
    - **Contributors**: List of contributors during this period
 
-3. For the Summary and Detailed Changes:
+6. For the Summary and Detailed Changes:
    - Focus on significant, user-facing changes
    - Avoid redundancy and overly technical details
    - Use clear, concise language
 
-4. Exclude all content related to README.md and CHANGELOG.md from the CHANGELOG details.
+7. Exclude all content related to README.md and CHANGELOG.md from the CHANGELOG details.
 
-5. Use proper Markdown formatting for improved readability.
+8. Use proper Markdown formatting for improved readability.
 
-6. Base the content on your analysis of the git log, inferring reasonable details if necessary.
+9. Base the content on your analysis of the git log, inferring reasonable details if necessary.
 
-7. Explain changes clearly for users unfamiliar with implementation details.
+10. Explain changes clearly for users unfamiliar with implementation details.
 
-8. Ensure the CHANGELOG is professional, factual, and not fictitious.
+11. Ensure the CHANGELOGs are professional, factual, and not fictitious.
 
-Present the CHANGELOG in this format:
+Present each CHANGELOG in this format:
 
 ```markdown
 # CHANGELOG
@@ -75,4 +83,4 @@ Present the CHANGELOG in this format:
 - [List of contributors]
 ```
 
-If you have any questions while generating the CHANGELOG, please ask.
+Generate CHANGELOGs for all applicable bi-weekly periods, starting from the earliest date in the git log to the latest date. Separate each CHANGELOG with a horizontal line (---) for clarity.
