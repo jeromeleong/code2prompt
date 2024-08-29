@@ -1,7 +1,7 @@
 //! This module handles git operations.
 use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDate, Utc};
-use git2::{Commit, DiffOptions, Repository};
+use git2::{Commit, Diff, DiffOptions, Repository};
 use log::info;
 use std::path::Path;
 
@@ -18,39 +18,56 @@ pub fn get_git_diff(repo_path: &Path) -> Result<String> {
     info!("正在打開倉庫,路徑:{:?}", repo_path);
     let repo = Repository::open(repo_path).context("無法打開倉庫")?;
 
-    // 獲取 HEAD 提交
     let head_commit = repo.head()?.peel_to_commit()?;
     let head_tree = head_commit.tree()?;
 
-    // 創建一個表示工作目錄的樹
     let mut index = repo.index()?;
     index.update_all(["*"].iter(), None)?;
     let work_tree_oid = index.write_tree()?;
     let work_tree = repo.find_tree(work_tree_oid)?;
 
-    // 比較 HEAD 和工作目錄
-    let diff = repo
-        .diff_tree_to_tree(
-            Some(&head_tree),
-            Some(&work_tree),
-            Some(DiffOptions::new().ignore_whitespace(true)),
-        )
-        .context("Failed to generate diff")?;
+    let mut diff_opts = DiffOptions::new();
+    diff_opts.ignore_whitespace(true);
 
-    let mut diff_text = Vec::new();
-    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
-        diff_text.extend_from_slice(line.content());
+    let diff = repo.diff_tree_to_tree(
+        Some(&head_tree),
+        Some(&work_tree),
+        Some(&mut diff_opts),
+    ).context("Failed to generate diff")?;
+
+    let filtered_diff = filter_diff(&diff)?;
+
+    Ok(filtered_diff)
+}
+
+fn filter_diff(diff: &Diff) -> Result<String> {
+    let mut diff_text = String::new();
+
+    diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
+        let file_name = delta.new_file().path()
+            .and_then(|p| p.file_name())
+            .and_then(|f| f.to_str())
+            .unwrap_or("");
+        let is_ignored_file = file_name.eq_ignore_ascii_case("readme.md") || file_name.eq_ignore_ascii_case("changelog.md");
+
+        if line.origin() == 'F' {
+            // 總是顯示文件標頭
+            let new_file = delta.new_file();
+            let old_file = delta.old_file();
+            if let (Some(old_path), Some(new_path)) = (old_file.path(), new_file.path()) {
+                diff_text.push_str(&format!("diff --git a/{} b/{}\n", 
+                    old_path.display(), new_path.display()));
+            }
+        } else if !is_ignored_file && (line.origin() == '+' || line.origin() == '-' || line.origin() == ' ') {
+            // 只包含非忽略文件的修改行
+            let content = std::str::from_utf8(line.content()).unwrap_or("無法解碼的內容");
+            diff_text.push(line.origin());
+            diff_text.push_str(content);
+        }
         true
-    })
-    .context("Failed to print diff")?;
+    }).context("Failed to print diff")?;
 
-    let diff_string = String::from_utf8_lossy(&diff_text).into_owned();
-
-    if diff_string.is_empty() {
-        info!("Git diff 是空的。這可能意味著沒有變更或所有變更都已暫存。");
-    }
-
-    Ok(diff_string)
+    Ok(diff_text)
 }
 
 /// Generates a git diff between two branches for the repository at the provided path
