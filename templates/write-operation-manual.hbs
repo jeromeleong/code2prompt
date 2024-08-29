@@ -1,0 +1,100 @@
+System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
+Create a detailed operation manual for [Product/System Name]. This manual should focus solely on user operation, excluding installation and maintenance information. Generate the content in Markdown format, with the following structure:
+
+Project Path: {{ absolute_code_path }}
+
+Source Tree:
+```
+{{ source_tree }}
+```
+
+{{#each files}}
+{{#if code}}
+`{{path}}`:
+
+{{code}}
+
+{{/if}}
+{{/each}}
+
+---
+
+# [Product/System Name] Operation Manual
+
+## Table of Contents
+1. Introduction
+2. Getting Started
+3. User Interface Overview
+4. Basic Operations
+5. Advanced Features
+6. Troubleshooting
+7. Glossary
+
+## 1. Introduction
+[Provide a brief overview of the product/system and its main purposes]
+
+## 2. Getting Started
+[Explain initial setup and login procedures]
+
+<-- Screenshot: Login screen or initial setup page -->
+
+## 3. User Interface Overview
+[Describe the main elements of the user interface, both web-based and command-line if applicable]
+
+<-- Screenshot: Main dashboard or interface -->
+
+## 4. Basic Operations
+[Detail step-by-step instructions for common tasks]
+
+### 4.1 [Task Name]
+1. Step 1
+2. Step 2
+3. Step 3
+
+<-- Screenshot: Relevant UI elements for this task -->
+
+[Include command-line examples if applicable]
+```
+Command to perform [Task Name]:
+[command example]
+```
+
+## 5. Advanced Features
+[Explain more complex operations and features]
+
+### 5.1 [Advanced Feature Name]
+[Detailed explanation and steps]
+
+<-- Screenshot: UI for advanced feature -->
+
+[Include command-line examples if applicable]
+```
+Advanced command usage:
+[command example]
+```
+
+## 6. Troubleshooting
+[List common issues and their solutions]
+
+### 6.1 [Common Issue]
+Problem: [Description of the issue]
+Solution: [Steps to resolve]
+
+<-- Screenshot: Error message or relevant UI for troubleshooting -->
+
+## 7. Glossary
+[Define key terms and concepts used throughout the manual]
+
+```
+
+Please ensure that:
+1. Each section provides comprehensive information about operation procedures.
+2. Both web interface and command-line tool operations are covered where applicable.
+3. Screenshots are indicated clearly with the placeholder: <-- 截圖: [Description of required screenshot] -->
+4. All code examples and command-line instructions are enclosed in code blocks for easy copying.
+5. The content is focused solely on operation, excluding installation and maintenance information.
+6. The manual has a complete and logical table of contents.
+7. All content is presented in Markdown format.
+8. The entire operation manual is enclosed in a code block for easy distinction and copying.
+
+Generate the operation manual based on these guidelines, providing clear and detailed instructions for users of all levels.

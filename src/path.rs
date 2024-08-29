@@ -18,7 +18,6 @@ use termtree::Tree;
 /// * `exclude` - The patterns of files to exclude.
 /// * `include_priority` - Whether to give priority to include patterns.
 /// * `line_number` - Whether to add line numbers to the code.
-/// * `relative_paths` - Whether to use relative paths.
 ///
 /// # Returns
 ///
@@ -29,7 +28,6 @@ pub fn traverse_directory(
     exclude: &[String],
     include_priority: bool,
     line_number: bool,
-    relative_paths: bool,
     exclude_from_tree: bool,
     no_codeblock: bool,
 ) -> Result<(String, Vec<serde_json::Value>)> {
@@ -76,12 +74,7 @@ pub fn traverse_directory(
                         let code_block = wrap_code_block(&code, path.extension().and_then(|ext| ext.to_str()).unwrap_or(""), line_number, no_codeblock);
 
                         if !code.trim().is_empty() && !code.contains(char::REPLACEMENT_CHARACTER) {
-                            let file_path = if relative_paths {
-                                format!("{}/{}", parent_directory, relative_path.display())
-                            } else {
-                                path.display().to_string()
-                            };
-
+                            let file_path = format!("{}/{}", parent_directory, relative_path.display());
                             files.push(json!({
                                 "path": file_path,
                                 "extension": path.extension().and_then(|ext| ext.to_str()).unwrap_or(""),

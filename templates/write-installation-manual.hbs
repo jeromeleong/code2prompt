@@ -1,0 +1,45 @@
+System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
+Generate a comprehensive installation manual for [product/system name] using the following guidelines:
+
+Project Path: {{ absolute_code_path }}
+
+Source Tree:
+```
+{{ source_tree }}
+```
+
+{{#each files}}
+{{#if code}}
+`{{path}}`:
+
+{{code}}
+
+{{/if}}
+{{/each}}
+
+---
+
+1. Provide a complete table of contents for the installation manual.
+
+2. Include step-by-step instructions for the entire installation process.
+
+3. Use clear, concise language suitable for the target audience (e.g., IT professionals, end-users).
+
+4. Specify any tools, equipment, or prerequisites needed for installation.
+
+5. Highlight important safety precautions or warnings where applicable.
+
+6. Include troubleshooting tips for common installation issues.
+
+7. Where screenshots are necessary, indicate with:
+   <-- Screenshot: [description of required screenshot] -->
+
+8. Format the manual using Markdown, including appropriate headings, lists, and emphasis.
+
+9. Enclose code snippets, commands, or configuration examples in code blocks for easy copying.
+
+10. Focus solely on the installation process. Do not include operation or maintenance instructions.
+
+11. Conclude with a section on verifying successful installation and next steps.
+
+Please generate the installation manual based on these guidelines, ensuring a professional and user-friendly document that facilitates a smooth installation process.

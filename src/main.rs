@@ -1,18 +1,18 @@
 use anyhow::{Context, Result};
+use arboard::Clipboard;
 use clap::Parser;
 use colored::*;
 use env_logger::Builder;
+use git2::Repository;
+use handlebars::Handlebars;
 use inquire::{Select, Text};
 use log::LevelFilter;
+use regex::Regex;
 use serde_json::json;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
-use git2::Repository;
-use handlebars::Handlebars;
-use regex::Regex;
-use arboard::Clipboard;
 
 const DEFAULT_TEMPLATE_NAME: &str = "default";
 const CUSTOM_TEMPLATE_NAME: &str = "custom";
@@ -44,9 +44,24 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
         "撰寫「以每兩周總結一次」ChangeLog 文件",
     ),
     (
+        "write-installation-manual",
+        include_str!("../templates/write-installation-manual.hbs"),
+        "撰寫安裝手冊",
+    ),
+    (
+        "write-operation-manual",
+        include_str!("../templates/write-operation-manual.hbs"),
+        "撰寫操作手冊",
+    ),
+    (
+        "write-maintenance-manual",
+        include_str!("../templates/write-maintenance-manual.hbs"),
+        "撰寫維護手冊",
+    ),
+    (
         "document-the-code",
         include_str!("../templates/document-the-code.hbs"),
-        "生成代碼文檔",
+        "為代碼生成注䆁",
     ),
     (
         "find-security-vulnerabilities",
@@ -91,7 +106,7 @@ const TEMPLATES: &[(&str, &str, &str)] = &[
     (
         "refactor",
         include_str!("../templates/refactor.hbs"),
-        "重構代碼",
+        "重構代碼項目",
     ),
 ];
 
@@ -123,11 +138,11 @@ enum Commands {
 #[derive(Parser)]
 struct Args {
     /// Patterns to include
-    #[clap(long)]
+    #[clap(short, long)]
     include: Option<String>,
 
     /// Patterns to exclude
-    #[clap(long)]
+    #[clap(short, long)]
     exclude: Option<String>,
 
     /// Include files in case of conflict between include and exclude patterns
@@ -156,10 +171,6 @@ struct Args {
     #[clap(long)]
     no_codeblock: bool,
 
-    /// Use relative paths instead of absolute paths, including the parent directory
-    #[clap(long)]
-    relative_paths: bool,
-
     /// Optional Disable copying to clipboard
     #[clap(long)]
     no_clipboard: bool,
@@ -184,16 +195,16 @@ struct Args {
 fn main() -> Result<()> {
     Builder::new().filter_level(LevelFilter::Info).init();
     let args = Cli::parse();
-    
+
     match &args.command {
         Commands::Clone { url, args } => {
             let temp_dir = TempDir::new()?;
             let repo_path = temp_dir.path();
-            Repository::clone(&url, repo_path)?;
+            Repository::clone(url, repo_path)?;
             process_path(repo_path, args)?;
         }
         Commands::Path { path, args } => {
-            process_path(&path, args)?;
+            process_path(path, args)?;
         }
     }
 
@@ -231,7 +242,6 @@ fn process_path(path: &Path, args: &Args) -> Result<()> {
         &exclude_patterns,
         args.include_priority,
         args.line_number,
-        args.relative_paths,
         args.exclude_from_tree,
         args.no_codeblock,
     )
@@ -344,19 +354,20 @@ fn get_git_diff_branch(args: &Args, template_content: &str) -> Result<String> {
         if branches.len() != 2 {
             return Err(anyhow::anyhow!("請提供兩個分支，以逗號分隔。"));
         }
-        Ok(
-            c2p::git::get_git_diff_between_branches(get_path_from_args(args)?, &branches[0], &branches[1])
-                .unwrap_or_default(),
+        Ok(c2p::git::get_git_diff_between_branches(
+            get_path_from_args(args)?,
+            &branches[0],
+            &branches[1],
         )
+        .unwrap_or_default())
     } else {
         Ok(String::new())
     }
 }
 
 fn get_path_from_args(args: &Args) -> Result<&Path> {
-    match args {
-        Args { .. } => Err(anyhow::anyhow!("Path not available for clone command")),
-    }
+    let Args { .. } = args;
+    Err(anyhow::anyhow!("路徑無法用於克隆命令"))
 }
 
 fn get_git_log_date(path: &Path, template_content: &str) -> Result<String> {
@@ -503,10 +514,7 @@ fn render_template(
     Ok(rendered.trim().to_string())
 }
 
-fn handle_undefined_variables(
-    data: &mut serde_json::Value,
-    template_content: &str,
-) -> Result<()> {
+fn handle_undefined_variables(data: &mut serde_json::Value, template_content: &str) -> Result<()> {
     let undefined_variables = extract_undefined_variables(template_content);
     let mut user_defined_vars = serde_json::Map::new();
 

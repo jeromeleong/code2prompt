@@ -1,141 +1,102 @@
+System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
+Generate a single, concise git commit message based on the provided `git diff`. Analyze the diff to understand the main purpose and functionality of the changes. Only include changes that are actually present in the diff - do not invent or fabricate any commits that are not reflected in the actual code changes.
 Project Path: {{ absolute_code_path }}
-
-Generate a high-quality git commit message based on the provided `git diff`. Analyze the diff to understand the purpose and functionality.
-
 Source Tree:
 ```
 {{ source_tree }}
 ```
-
 {{#if git_diff}}
 Diff:
 ```
 {{ git_diff }}
 ```
 {{/if}}
-
-Guidelines for the git commit message:
-
-1. Structure: 
-   - Subject line: Brief summary of changes (50-72 characters)
+Git commit message guidelines:
+1. Structure:
+   - Single line summary: Brief overview of changes (50-72 characters)
    - Blank line
-   - Body: Detailed explanation if necessary (wrap at 72 characters)
+   - Body: Optional. Provide more detailed explanation if necessary (wrap at 72 characters)
    - Blank line
-   - Footer: References to issues, breaking changes, etc.
-
-2. Subject Line:
+   - Footer: Optional. References to issues, breaking changes, etc.
+2. Summary commit format:
    - Capitalize the first letter
    - Use the imperative mood ("Add feature" not "Added feature")
    - No period at the end
    - Limit to 50-72 characters
-
-3. Body:
+   - Do not use GitMoji
+3. Sub-commits format (if needed):
    - Explain what and why, not how
-   - Use bullet points for multiple points
-   - Wrap text at 72 characters
    - Use present tense
-   - For README.md and CHANGELOG.md, only mention that they were updated without detailing the changes
-
-4. Footer:
+   - Each sub-commit must start with an appropriate GitMoji
+   - Only include changes that are actually present in the diff
+   - Wrap at 72 characters
+4. Footer (if needed):
    - Reference issues and pull requests
    - Mention breaking changes
-
 5. Conventional Commits:
    - Use type prefixes: feat, fix, docs, style, refactor, test, chore
    - Example: "feat: add user authentication"
+6. Important notes:
+   - Content related to README.md and CHANGELOG.md must be completely excluded from the commit message
+   - Do not generate fake or non-existent commits. Only describe changes that are actually present in the provided diff
+   - If the diff is empty or there are no significant changes, state this fact instead of inventing commits
+   - Ensure all Sub-commits in the body start with use most appropriate GitMoji
+Please provide the commit message using the following format:
+```
 
-6. Emoji:
-   - Include an appropriate emoji at the start of each bullet point in the body
-   - Do not use emoji in the subject line
+<Summary commit>
 
-Example:
-feat: Implement user registration API
+- <GitMoji> <Sub-commit 1>
 
-• 🔒️ Add secure password hashing
-• 📝 Update README.md
-• 📝 Update CHANGELOG.md
-• ✅ Add unit tests for new API endpoints
+- <GitMoji> <Sub-commit 2>
 
-BREAKING CHANGE: This changes the user model schema
+...
 
-Must use GitMoji convention for bullet points in the body. Here are some helpful emojis:
+<Footer>
 
-- 🐛 Fix bug
-- ✨ Introduce new features
-- 📝 Add or update documentation
-- 🚀 Deploy stuff
-- ✅ Add, update, or pass tests
-- ♻️ Refactor code
-- ⬆️ Upgrade dependencies
-- 🔧 Add or update configuration files
-- 🌐 Internationalization and localization
-- 💡 Add or update comments in source code
-- 🎨 Improve structure / format of the code
+```
+GitMoji reference:
+- ✨ New feature
+- 🚀 Deploy / Release
 - ⚡️ Improve performance
-- 🔥 Remove code or files
+- 🔒️ Security improvements
+- 💄 UI/UX updates
+- 🌐 Internationalization and localization
+- 🐛 Fix bug
 - 🚑️ Critical hotfix
-- 💄 Add or update the UI and style files
-- 🎉 Begin a project
-- 🔒️ Fix security issues
-- 🔐 Add or update secrets
-- 🔖 Release / Version tags
-- 🚨 Fix compiler / linter warnings
-- 🚧 Work in progress
+- ♻️ Refactor code
+- 🎨 Improve code structure/format
+- 🔥 Remove code or files
+- 👽️ Update due to external API changes
+- 📝 Add or update documentation
+- 💡 Add or update comments
+- ✅ Add or update tests
+- 👷 CI related changes
 - 💚 Fix CI Build
+- ⬆️ Upgrade dependencies
 - ⬇️ Downgrade dependencies
-- 📌 Pin dependencies to specific versions
-- 👷 Add or update CI build system
-- 📈 Add or update analytics or track code
+- 📌 Pin dependencies
 - ➕ Add a dependency
 - ➖ Remove a dependency
-- 🔨 Add or update development scripts
-- ✏️ Fix typos
-- 💩 Write bad code that needs to be improved
-- ⏪️ Revert changes
+- 🔧 Update configuration files
+- 🔨 Update development scripts
+- 🎉 Initial commit
 - 🔀 Merge branches
-- 📦️ Add or update compiled files or packages
-- 👽️ Update code due to external API changes
-- 🚚 Move or rename resources (e.g., files, paths, routes)
-- 📄 Add or update license
-- 💥 Introduce breaking changes
-- 🍱 Add or update assets
-- ♿️ Improve accessibility
-- 🍻 Write code drunkenly
-- 💬 Add or update text and literals
-- 🗃️ Perform database related changes
+- ⏪️ Revert changes
+- 🙈 Update .gitignore
+- 📦️ Update compiled files or packages
+- 🚚 Move or rename resources
+- 📄 License related changes
+- 🍱 Update assets
 - 🔊 Add or update logs
 - 🔇 Remove logs
-- 👥 Add or update contributor(s)
-- 🚸 Improve user experience / usability
-- 🏗️ Make architectural changes
-- 📱 Work on responsive design
-- 🤡 Mock things
-- 🥚 Add or update an easter egg
-- 🙈 Add or update a .gitignore file
-- 📸 Add or update snapshots
-- ⚗️ Perform experiments
+- 👥 Update contributors
+- 🏗️ Architectural changes
+- 🧪 Experiments or tests
 - 🔍️ Improve SEO
 - 🏷️ Add or update types
-- 🌱 Add or update seed files
-- 🚩 Add, update, or remove feature flags
-- 🥅 Catch errors
-- 💫 Add or update animations and transitions
-- 🗑️ Deprecate code that needs to be cleaned up
-- 🛂 Work on code related to authorization, roles and permissions
-- 🩹 Simple fix for a non-critical issue
-- 🧐 Data exploration/inspection
-- ⚰️ Remove dead code
-- 🧪 Add a failing test
-- 👔 Add or update business logic
-- 🩺 Add or update healthcheck
-- 🧱 Infrastructure related changes
-- 🧑‍💻 Improve developer experience
-- 💸 Add sponsorships or money related infrastructure
-- 🧵 Add or update code related to multithreading or concurrency
-- 🦺 Add or update code related to validation
+- 🚩 Feature flags
+- 🛂 Authorization and permissions
+- 🧱 Infrastructure changes
 
-Ensure all bullet points in the body start with an appropriate GitMoji!!! 
-Ensure all bullet points in the body start with an appropriate GitMoji!!! 
-Ensure all bullet points in the body start with an appropriate GitMoji!!! 
-The subject line should not contain a GitMoji.
-For README.md and CHANGELOG.md, simply mention they were updated without providing details of the changes.
+Only include changes that are actually present in the diff - do not invent or fabricate any commits.

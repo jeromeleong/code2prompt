@@ -1,0 +1,46 @@
+System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
+Generate a comprehensive maintenance manual for [product/system name]. The manual should focus exclusively on maintenance procedures, not installation or operation. Include the following:
+
+Project Path: {{ absolute_code_path }}
+
+Source Tree:
+```
+{{ source_tree }}
+```
+
+{{#each files}}
+{{#if code}}
+`{{path}}`:
+
+{{code}}
+
+{{/if}}
+{{/each}}
+
+---
+
+1. A complete table of contents for the maintenance manual
+
+2. Detailed maintenance procedures, including:
+   - Routine maintenance tasks and schedules
+   - Troubleshooting guides
+   - Repair procedures
+   - Parts replacement instructions
+   - Safety precautions for maintenance work
+
+3. Where visual aids are needed, include placeholders like:
+   <-- Screenshot: Description of required image content -->
+
+4. Use technical language appropriate for maintenance personnel
+
+5. Include any necessary diagrams, charts, or tables to support the maintenance procedures
+
+6. Provide a list of required tools and equipment for maintenance tasks
+
+7. Include a section on proper disposal or recycling of replaced parts
+
+8. Add a glossary of technical terms used in the manual
+
+Format the entire manual in Markdown, using appropriate headers, lists, and code blocks to organize the content and make it easy to read and copy.
+
+Ensure all content is strictly related to maintenance procedures and avoid any information about product installation or general operation.

@@ -1,6 +1,7 @@
-Project Path: {{ absolute_code_path }}
+System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
+Generate a high-quality daily CHANGELOG file for this project, suitable for hosting on GitHub. Analyze the git log and git diff to understand the changes made on the specified date.
 
-I'd like you to generate a daily CHANGELOG file for this project, suitable for hosting on GitHub. Analyze the git log and git diff to understand the changes made on the specified date.
+Project Path: {{ absolute_code_path }}
 
 {{#if git_log_date}}
 Git log for the period:
@@ -9,25 +10,25 @@ Git log for the period:
 ```
 {{/if}}
 
-The changelog should include the following sections:
+Generate the CHANGELOG content in a code block for easy distinction and copying. The CHANGELOG should include the following sections:
 
 1. **Date**: YYYY-MM-DD
-2. **Summary of Changes**
-    - Brief overview of the main changes and updates made on this date, avoiding redundancy.
-    - If README.md or CHANGELOG.md were modified, mention this without detailing the changes.
-3. **Detailed Changes**
-    - **Added**: List of new features, files, or functionalities added, excluding those that were immediately removed.
-    - **Changed**: List of modifications to existing features or files, avoiding listing redundant changes caused by other operations (like adding and then removing).
-    - **Deprecated**: List of features or functionalities that will be removed in future releases.
-    - **Removed**: List of features, files, or functionalities that have been removed, excluding those that were recently added.
-    - **Fixed**: List of bug fixes, avoiding listing redundant fixes caused by other operations.
-    - **Security**: List of security-related fixes or improvements, avoiding redundant security updates.
-    - For README.md and CHANGELOG.md, only mention that they were updated without detailing the changes.
-4. **Contributors**
-    - List of contributors who made changes on this date.
+2. **Summary of Changes**: Brief overview of the main changes and updates made on this date.
+3. **Detailed Changes**:
+   - **Added**: New features, files, or functionalities
+   - **Changed**: Modifications to existing features or files
+   - **Deprecated**: Features or functionalities marked for future removal
+   - **Removed**: Features, files, or functionalities that have been removed
+   - **Fixed**: Bug fixes
+   - **Security**: Security-related fixes or improvements
+4. **Contributors**: List of contributors who made changes on this date
 
-Write the content in Markdown format. Use your analysis of the git log and git diff to generate accurate and helpful content, but also explain things clearly for users who may not be familiar with the implementation details.
+Guidelines:
+- Exclude all content related to README.md and CHANGELOG.md from the CHANGELOG.
+- Provide accurate and helpful content based on your analysis of the git log and git diff.
+- Explain changes clearly for users who may not be familiar with implementation details.
+- Avoid redundancy in listings.
+- Infer reasonable details if needed, but prioritize information from the git log and git diff.
+- Ensure the CHANGELOG is professional, factual, and not fictitious.
 
-Feel free to infer reasonable details if needed, but try to stick to what can be determined from the git log and git diff. Let me know if you have any other questions as you're writing!
-
-For README.md and CHANGELOG.md, simply mention they were updated without providing details of the changes.
+Present the CHANGELOG in Markdown format within a code block. If you have any questions while generating the CHANGELOG, please ask.

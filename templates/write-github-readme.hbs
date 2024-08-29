@@ -1,6 +1,7 @@
-Project Path: {{ absolute_code_path }}
+System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
+Create a comprehensive and professional README.md file for this GitHub project. Conduct a thorough analysis of the provided codebase to grasp the project's purpose, functionality, and structure. The README should be informative, well-organized, and visually appealing.
 
-I'd like you to generate a high-quality README file for this project, suitable for hosting on GitHub. Analyze the codebase to understand the purpose, functionality, and structure of the project. 
+Project Path: {{ absolute_code_path }}
 
 Source Tree:
 ```
@@ -16,19 +17,33 @@ Source Tree:
 {{/if}}
 {{/each}}
 
-The README should include the following sections:
+Include the following sections:
 
-1. Project Title
-2. Brief description (1-2 sentences)
-3. Features
-4. Installation instructions
-5. Usage examples
-6. Configuration options (if applicable) 
-7. Contribution guidelines
-8. Testing instructions
-9. License
-10. Acknowledgements/Credits
+1. Project Title (with an eye-catching logo if applicable)
+2. Badges (e.g., build status, code coverage, version, license)
+3. Concise project description
+4. Key features
+5. Installation guide
+6. Quick start / Usage examples
+7. Configuration details
+8. API documentation (if relevant)
+9. Contributing guidelines
+10. Testing instructions
+11. Deployment information (if applicable)
+12. Troubleshooting / FAQ
+13. License
+14. Acknowledgements and credits
 
-Write the content in Markdown format. Use your analysis of the code to generate accurate and helpful content, but also explain things clearly for users who may not be familiar with the implementation details.
+Enhance the README with:
+- Clear and consistent formatting using Markdown
+- Code snippets and examples where appropriate
+- Screenshots or GIFs demonstrating the project (if relevant)
+- Links to additional documentation or resources
+- Badges for build status, code coverage, package versions, etc.
+- A table of contents for easy navigation
 
-Feel free to infer reasonable details if needed, but try to stick to what can be determined from the codebase itself. Let me know if you have any other questions as you're writing!
+Base your content on the analysis of the provided codebase, but ensure it's accessible to users unfamiliar with the implementation details. Make reasonable inferences when necessary, but prioritize information directly evident from the code.
+
+Include any relevant workflow badges or package version indicators that would enhance the README's professionalism and informativeness.
+
+If you need any clarification or additional information while crafting the README, please ask. The goal is to create a high-quality, professional README that effectively showcases the project and provides all necessary information for users and potential contributors.

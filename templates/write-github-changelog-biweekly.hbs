@@ -1,6 +1,7 @@
-Project Path: {{ absolute_code_path }}
+System: You are an intelligent programmer, powered by GPT-4. You are happy to help answer any questions that the user has (usually they will be about coding).
+Generate a high-quality bi-weekly CHANGELOG for this project, suitable for GitHub hosting. Analyze the provided git log to understand changes made during the specified period.
 
-I'd like you to generate a bi-weekly CHANGELOG file for this project, suitable for hosting on GitHub. Analyze the git log to understand the changes made during the specified period.
+Project Path: {{ absolute_code_path }}
 
 {{#if git_log_date}}
 Git log for the period:
@@ -9,25 +10,69 @@ Git log for the period:
 ```
 {{/if}}
 
-The changelog should include the following sections:
+Guidelines for generating the CHANGELOG:
 
-1. **Date Range**: [Specify the start and end dates here]
-2. **Summary of Changes**
-    - Brief overview of the main changes and updates made during this period, focusing on significant updates and avoiding redundancy.
-    - If README.md or CHANGELOG.md were modified, mention this without detailing the changes.
-3. **Detailed Changes**
-    - **Added**: List of new features, files, or functionalities added, excluding those that were immediately removed.
-    - **Changed**: List of modifications to existing features or files, avoiding listing redundant changes caused by other operations (like adding and then removing).
-    - **Deprecated**: List of features or functionalities that will be removed in future releases.
-    - **Removed**: List of features, files, or functionalities that have been removed, excluding those that were recently added.
-    - **Fixed**: List of bug fixes, avoiding listing redundant fixes caused by other operations.
-    - **Security**: List of security-related fixes or improvements, avoiding redundant security updates.
-    - For README.md and CHANGELOG.md, only mention that they were updated without detailing the changes.
-4. **Contributors**
-    - List of contributors who made changes during this period.
+1. Present the CHANGELOG content within a code block for easy distinction and copying.
 
-Write the content in Markdown format. Use your analysis of the git log to generate accurate and helpful content, but also explain things clearly for users who may not be familiar with the implementation details.
+2. Include the following sections:
+   - **Date Range**: [Start date] to [End date]
+   - **Summary of Changes**: Brief overview of significant updates
+   - **Detailed Changes**:
+     - Added
+     - Changed
+     - Deprecated
+     - Removed
+     - Fixed
+     - Security
+   - **Contributors**: List of contributors during this period
 
-Feel free to infer reasonable details if needed, but try to stick to what can be determined from the git log. Let me know if you have any other questions as you're writing!
+3. For the Summary and Detailed Changes:
+   - Focus on significant, user-facing changes
+   - Avoid redundancy and overly technical details
+   - Use clear, concise language
 
-For README.md and CHANGELOG.md, simply mention they were updated without providing details of the changes.
+4. Exclude all content related to README.md and CHANGELOG.md from the CHANGELOG details.
+
+5. Use proper Markdown formatting for improved readability.
+
+6. Base the content on your analysis of the git log, inferring reasonable details if necessary.
+
+7. Explain changes clearly for users unfamiliar with implementation details.
+
+8. Ensure the CHANGELOG is professional, factual, and not fictitious.
+
+Present the CHANGELOG in this format:
+
+```markdown
+# CHANGELOG
+
+## [Start date] to [End date]
+
+### Summary of Changes
+[Brief overview of main updates]
+
+### Detailed Changes
+
+#### Added
+- [List of new features or functionalities]
+
+#### Changed
+- [List of modifications to existing features]
+
+#### Deprecated
+- [List of features marked for future removal]
+
+#### Removed
+- [List of removed features or functionalities]
+
+#### Fixed
+- [List of bug fixes]
+
+#### Security
+- [List of security-related improvements]
+
+### Contributors
+- [List of contributors]
+```
+
+If you have any questions while generating the CHANGELOG, please ask.
