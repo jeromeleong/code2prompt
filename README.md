@@ -1,5 +1,7 @@
 # c2p - 項目代碼提示生成工具
 
+[![Github Main Base Check](https://github.com/jeromeleong/c2p/actions/workflows/base_check.yml/badge.svg)](https://github.com/jeromeleong/c2p/actions/workflows/base_check.yml)
+
 ## 簡介
 c2p 是根據[code2prompt](https://github.com/mufeedvh/code2prompt)修改的自用工具。
 c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時發現的小問題。

@@ -29,11 +29,9 @@ pub fn get_git_diff(repo_path: &Path) -> Result<String> {
     let mut diff_opts = DiffOptions::new();
     diff_opts.ignore_whitespace(true);
 
-    let diff = repo.diff_tree_to_tree(
-        Some(&head_tree),
-        Some(&work_tree),
-        Some(&mut diff_opts),
-    ).context("Failed to generate diff")?;
+    let diff = repo
+        .diff_tree_to_tree(Some(&head_tree), Some(&work_tree), Some(&mut diff_opts))
+        .context("Failed to generate diff")?;
 
     let filtered_diff = filter_diff(&diff)?;
 
@@ -44,28 +42,37 @@ fn filter_diff(diff: &Diff) -> Result<String> {
     let mut diff_text = String::new();
 
     diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
-        let file_name = delta.new_file().path()
+        let file_name = delta
+            .new_file()
+            .path()
             .and_then(|p| p.file_name())
             .and_then(|f| f.to_str())
             .unwrap_or("");
-        let is_ignored_file = file_name.eq_ignore_ascii_case("readme.md") || file_name.eq_ignore_ascii_case("changelog.md");
+        let is_ignored_file = file_name.eq_ignore_ascii_case("readme.md")
+            || file_name.eq_ignore_ascii_case("changelog.md");
 
         if line.origin() == 'F' {
             // 總是顯示文件標頭
             let new_file = delta.new_file();
             let old_file = delta.old_file();
             if let (Some(old_path), Some(new_path)) = (old_file.path(), new_file.path()) {
-                diff_text.push_str(&format!("diff --git a/{} b/{}\n", 
-                    old_path.display(), new_path.display()));
+                diff_text.push_str(&format!(
+                    "diff --git a/{} b/{}\n",
+                    old_path.display(),
+                    new_path.display()
+                ));
             }
-        } else if !is_ignored_file && (line.origin() == '+' || line.origin() == '-' || line.origin() == ' ') {
+        } else if !is_ignored_file
+            && (line.origin() == '+' || line.origin() == '-' || line.origin() == ' ')
+        {
             // 只包含非忽略文件的修改行
             let content = std::str::from_utf8(line.content()).unwrap_or("無法解碼的內容");
             diff_text.push(line.origin());
             diff_text.push_str(content);
         }
         true
-    }).context("Failed to print diff")?;
+    })
+    .context("Failed to print diff")?;
 
     Ok(diff_text)
 }
@@ -221,21 +228,29 @@ fn format_commit_with_diff(repo: &Repository, commit: &Commit) -> Result<String>
 
     // Convert diff to text
     diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
-        let file_name = delta.new_file().path()
+        let file_name = delta
+            .new_file()
+            .path()
             .and_then(|p| p.file_name())
             .and_then(|f| f.to_str())
             .unwrap_or("");
-        let is_ignored_file = file_name.eq_ignore_ascii_case("readme.md") || file_name.eq_ignore_ascii_case("changelog.md");
+        let is_ignored_file = file_name.eq_ignore_ascii_case("readme.md")
+            || file_name.eq_ignore_ascii_case("changelog.md");
 
         if line.origin() == 'F' {
             // Always show file header
             let new_file = delta.new_file();
             let old_file = delta.old_file();
             if let (Some(old_path), Some(new_path)) = (old_file.path(), new_file.path()) {
-                output.push_str(&format!("diff --git a/{} b/{}\n", 
-                    old_path.display(), new_path.display()));
+                output.push_str(&format!(
+                    "diff --git a/{} b/{}\n",
+                    old_path.display(),
+                    new_path.display()
+                ));
             }
-        } else if !is_ignored_file && (line.origin() == '+' || line.origin() == '-' || line.origin() == ' ') {
+        } else if !is_ignored_file
+            && (line.origin() == '+' || line.origin() == '-' || line.origin() == ' ')
+        {
             // Only include non-ignored file changes
             let content = std::str::from_utf8(line.content()).unwrap_or("無法解碼的內容");
             output.push(line.origin());

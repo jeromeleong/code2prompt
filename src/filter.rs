@@ -32,9 +32,10 @@ pub fn should_include_file(
     };
     let path_str = canonical_path.to_str().unwrap_or("");
 
-    let included = include_patterns.is_empty() || include_patterns
-        .iter()
-        .any(|pattern| matches_regex(path_str, pattern));
+    let included = include_patterns.is_empty()
+        || include_patterns
+            .iter()
+            .any(|pattern| matches_regex(path_str, pattern));
     let excluded = exclude_patterns
         .iter()
         .any(|pattern| matches_regex(path_str, pattern));

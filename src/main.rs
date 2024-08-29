@@ -143,11 +143,11 @@ enum Commands {
 #[derive(Parser)]
 struct Args {
     /// Patterns to include
-    #[clap(short, long="in", visible_alias = "include")]
-    include : Option<String>,
+    #[clap(short, long = "in", visible_alias = "include")]
+    include: Option<String>,
 
     /// Patterns to exclude
-    #[clap(short, long="nor", visible_alias = "exclude")]
+    #[clap(short, long = "nor", visible_alias = "exclude")]
     exclude: Option<String>,
 
     /// Include files in case of conflict between include and exclude patterns
@@ -517,7 +517,11 @@ fn select_language() -> Result<String> {
 
     let selection = Select::new("請選擇回覆使用的語言:", options).prompt()?;
 
-    Ok(selection.split_whitespace().next().unwrap_or("").to_string())
+    Ok(selection
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_string())
 }
 
 fn handlebars_setup(template_str: &str, template_name: &str) -> Result<Handlebars<'static>> {

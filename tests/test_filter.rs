@@ -95,7 +95,7 @@ mod tests {
     fn test_include_patterns() {
         let base_path = TEST_DIR.path();
 
-        let include_patterns = vec!["*.py".to_string()];
+        let include_patterns = vec![r".*\.py$".to_string()];
         let exclude_patterns = vec![];
         let include_priority = false;
 
@@ -139,7 +139,7 @@ mod tests {
         let base_path = TEST_DIR.path();
 
         let include_patterns = vec![];
-        let exclude_patterns = vec!["*.txt".to_string()];
+        let exclude_patterns = vec![r".*\.txt$".to_string()];
         let include_priority = false;
 
         for file in [
@@ -181,7 +181,7 @@ mod tests {
     fn test_include_files() {
         let base_path = TEST_DIR.path();
 
-        let include_patterns = vec!["**/foo.py".to_string(), "**/bar.py".to_string()];
+        let include_patterns = vec![r".*/foo\.py$".to_string(), r".*/bar\.py$".to_string()];
         let exclude_patterns = vec![];
         let include_priority = false;
 
@@ -222,7 +222,7 @@ mod tests {
         let base_path = TEST_DIR.path();
 
         let include_patterns = vec![];
-        let exclude_patterns = vec!["**/foo.py".to_string(), "**/bar.py".to_string()];
+        let exclude_patterns = vec![r".*/foo\.py$".to_string(), r".*/bar\.py$".to_string()];
         let include_priority = false;
 
         for file in ["lowercase/foo.py", "lowercase/bar.py"] {
@@ -261,8 +261,8 @@ mod tests {
     fn test_include_exclude_conflict_file() {
         let base_path = TEST_DIR.path();
 
-        let include_patterns = vec!["**/foo.py".to_string()];
-        let exclude_patterns = vec!["**/foo.py".to_string()];
+        let include_patterns = vec![r".*/foo\.py$".to_string()];
+        let exclude_patterns = vec![r".*/foo\.py$".to_string()];
         let include_priority = true;
 
         for file in ["lowercase/foo.py"] {
@@ -302,8 +302,8 @@ mod tests {
     fn test_include_exclude_conflict_extension() {
         let base_path = TEST_DIR.path();
 
-        let include_patterns = vec!["*.py".to_string()];
-        let exclude_patterns = vec!["*.py".to_string()];
+        let include_patterns = vec![r".*\.py$".to_string()];
+        let exclude_patterns = vec![r".*\.py$".to_string()];
         let include_priority = true;
 
         for file in [
@@ -359,7 +359,7 @@ mod tests {
     fn test_should_exclude_file_with_patterns() {
         let path = Path::new("src/main.rs");
         let include_patterns: Vec<String> = vec![];
-        let exclude_patterns: Vec<String> = vec!["*.rs".to_string()];
+        let exclude_patterns: Vec<String> = vec![r".*\.rs$".to_string()];
         let include_priority = false;
         assert!(!should_include_file(
             &path,
