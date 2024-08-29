@@ -4,7 +4,7 @@
 c2p 是根據[code2prompt](https://github.com/mufeedvh/code2prompt)修改的自用工具。
 c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時發現的小問題。
 
-## 主要的改動（2024-08-18）
+## 主要的改動（2024-08-29）
 ### 命令行的改動
 - 移除 `c2p <path>` 命令，因為增加另的子命令，所以這個命令需要轉為子命令
 
@@ -13,8 +13,10 @@ c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時
 - 增加 `c2p path <path>` 子命令，等於原來的`c2p <path>`
 
 ### 命令行配置的改動
-- 增加 `-l / --lang` 配置，設定AI 回答的語言，如`--lang zh-hant`是使用繁體中文回答
+- 增加 `-l / --lang` 配置，設定AI 回答的語言，如`--lang zh-hant`是使用繁體中文回答。如沒有使用`-l`，會自動進入語言選擇介面
 - 增加 `--hbs <.hbs path>` 配置，用於使用自定義 Handlebars 模板文件
+- 增加 `--in <regex>,<regex>` 配置，用正則表達式代替`--include <String>`原有方法
+- 增加 `--nor <regex>,<regex>` 配置，用正則表達式代替`--exclude <String>`原有方法
 - 修改 `-t / --template <template name>` 配置，專注於使用預定義的 Handlebars 模板文件
     - 直接使用`-t`而不填寫`<template name>`，會顯示所有預定義的 Handlebars 模板文件，並提供交互的方式來選擇使用相關 Handlebars 模板。
     - 使用`-t <template name>`時，不需要填寫`.hbs`，如`-t write-git-commit` 即可
@@ -22,11 +24,19 @@ c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時
 - 移除 `--git-diff-branch` 配置，程式會自動根據 Handlebars 模板文件查詢是否需要相關內容，並用交互的方式獲取所需資料
 - 移除 `--git-log-branch` 配置，對我來說有點用不上，在git.rs 直接移除了相關Function
 - 移除 `--token` 配置，因為已經是標配，只能為 True
+- 移除 `--include` 配置，改由`--in`處理
+- 移除 `--exclude` 配置，改由`--nor`處理
 
 ### 預定義的 Handlebars 模板文件的改動
 - 增加 `write-github-changelog-daily`，以每天總結一次的方式來總結所有提交
 - 增加 `write-github-changelog-biweekly`，以每兩周總結一次的方式來總結所有提交
+- 增加 `write-installation-manual`，撰寫安裝文件
+- 增加 `write-operation-manual`，撰寫操作文件
+- 增加 `write-maintenance-manual`，撰寫維護文件
+- 增加 `write-api-manual`，撰寫API使用文件
 - 修改 `write-git-commit`，根據[opencommit](https://github.com/di-sukharev/opencommit/) 項目的 Prompt 來進行修改
+- 修改`refactor`，簡單修改提示詞
+- 修改`document-the-code`，簡單修改提示詞
 
 ### Handlebars 變量的改動
 - 增加 `git_log_date`，等同於`git log -p --since="YYYY-MM-DD" --until="YYYY-MM-DD"`，相關日期會通過交互的方式要求使用者填寫
@@ -59,6 +69,22 @@ git clone https://github.com/jeromeleong/c2p.git
 cd c2p/
 cargo build --release
 ```
+
+## 快速使用
+
+在項目根目錄中，使用
+```sh
+c2p path ./ 
+```
+```output
+[2024-08-29T14:49:27Z INFO  c2p] 遍歷目錄並構建樹...
+[2024-08-29T14:49:27Z INFO  c2p] 完成!
+> 請選擇回覆使用的語言: zh-hant (繁體中文)
+[i] Token 數量: 30119, 模型資訊: GPT-4o models
+[✓] 成功複製到剪貼板。
+```
+
+成功🏅
 
 ## 使用示例
 生成默認提示：
@@ -106,8 +132,8 @@ c2p clone https://github.com/user/repo.git -t
 
 ## 配置選項
 所有子命令都適用下面的配置
-- `--include`: 包含模式（多個模式用逗號分隔）
-- `--exclude`: 排除模式（多個模式用逗號分隔）
+- `--in`: 包含模式（多個正則可用逗號分隔）
+- `--nor`: 排除模式（多個正則可用逗號分隔）
 - `--include-priority`: 在包含和排除模式衝突時，優先包含
 - `--exclude-from-tree`: 根據排除模式從源樹中排除文件/文件夾
 - `--encoding`: 使用的令牌化器（默認為 cl100k）
