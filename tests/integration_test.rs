@@ -89,11 +89,12 @@ mod tests {
         }
 
         fn command(&self) -> Command {
-            let mut cmd =
-                Command::cargo_bin("code2prompt").expect("Failed to find code2prompt binary");
-            cmd.arg(&self.dir.path().to_str().unwrap())
+            let mut cmd = Command::cargo_bin("c2p").expect("Failed to find code2prompt binary");
+            cmd.arg("path")
+                .arg(&self.dir.path().to_str().unwrap())
                 .arg("--output")
                 .arg(&self.output_file)
+                .arg("--lang=en")
                 .arg("--no-clipboard");
             cmd
         }
@@ -107,7 +108,7 @@ mod tests {
     fn test_include_extensions() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--include=*.py").assert().success();
+        cmd.arg("--in=*.py").assert().success();
 
         let output = env.read_output();
         debug!("Test include extensions output:\n{}", output);
@@ -122,7 +123,7 @@ mod tests {
     fn test_exclude_extensions() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--exclude=*.txt").assert().success();
+        cmd.arg("--nor=*.txt").assert().success();
 
         let output = env.read_output();
         debug!("Test exclude files output:\n{}", output);
@@ -138,7 +139,7 @@ mod tests {
     fn test_include_files() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--include=**/foo.py,**/bar.py").assert().success();
+        cmd.arg("--in=**/foo.py,**/bar.py").assert().success();
 
         let output = env.read_output();
         debug!("Test include files output:\n{}", output);
@@ -154,7 +155,7 @@ mod tests {
     fn test_include_folders() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--include=**/lowercase/**").assert().success();
+        cmd.arg("--in=**/lowercase/**").assert().success();
 
         let output = env.read_output();
         debug!("Test include folders output:\n{}", output);
@@ -169,7 +170,7 @@ mod tests {
     fn test_exclude_files() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--exclude=**/foo.py,**/bar.py").assert().success();
+        cmd.arg("--nor=**/foo.py,**/bar.py").assert().success();
 
         let output = env.read_output();
         debug!("Test exclude files output:\n{}", output);
@@ -185,7 +186,7 @@ mod tests {
     fn test_exclude_folders() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--exclude=**/uppercase/**").assert().success();
+        cmd.arg("--nor=**/uppercase/**").assert().success();
 
         let output = env.read_output();
         debug!("Test exclude folders output:\n{}", output);
@@ -200,8 +201,8 @@ mod tests {
     fn test_include_exclude_with_include_priority() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--include=*.py,**/lowercase/**")
-            .arg("--exclude=**/foo.py,**/uppercase/**")
+        cmd.arg("--in=*.py,**/lowercase/**")
+            .arg("--nor=**/foo.py,**/uppercase/**")
             .arg("--include-priority")
             .assert()
             .success();
@@ -220,8 +221,8 @@ mod tests {
     fn test_include_exclude_with_exclude_priority() {
         let env = TestEnv::new();
         let mut cmd = env.command();
-        cmd.arg("--include=*.py,**/lowercase/**")
-            .arg("--exclude=**/foo.py,**/uppercase/**")
+        cmd.arg("--in=*.py,**/lowercase/**")
+            .arg("--nor=**/foo.py,**/uppercase/**")
             .assert()
             .success();
 

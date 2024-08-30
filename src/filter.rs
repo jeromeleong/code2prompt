@@ -1,6 +1,4 @@
-//! This module contains the logic for filtering files based on include and exclude patterns.
-
-use log::error;
+use log::{debug, error, warn};
 use regex::Regex;
 use std::fs;
 use std::path::Path;
@@ -23,22 +21,40 @@ pub fn should_include_file(
     exclude_patterns: &[String],
     include_priority: bool,
 ) -> bool {
-    let canonical_path = match fs::canonicalize(path) {
-        Ok(path) => path,
+    let path_str = match fs::canonicalize(path) {
+        Ok(canonical_path) => canonical_path.to_string_lossy().into_owned(),
         Err(e) => {
-            error!("無法正規化路徑: {}", e);
-            return false;
+            warn!("無法正規化路徑: {}, 使用原始路徑", e);
+            path.to_string_lossy().into_owned()
         }
     };
-    let path_str = canonical_path.to_str().unwrap_or("");
 
-    let included = include_patterns.is_empty()
-        || include_patterns
-            .iter()
-            .any(|pattern| matches_regex(path_str, pattern));
-    let excluded = exclude_patterns
-        .iter()
-        .any(|pattern| matches_regex(path_str, pattern));
+    let included = if include_patterns.is_empty() {
+        true // 如果沒有包含模式，默認包含所有文件
+    } else {
+        include_patterns.iter().any(|pattern| {
+            let matches = matches_pattern(&path_str, pattern);
+            debug!(
+                "Include pattern '{}' matches path '{}': {}",
+                pattern, path_str, matches
+            );
+            matches
+        })
+    };
+
+    let excluded = exclude_patterns.iter().any(|pattern| {
+        let matches = matches_pattern(&path_str, pattern);
+        debug!(
+            "Exclude pattern '{}' matches path '{}': {}",
+            pattern, path_str, matches
+        );
+        matches
+    });
+
+    debug!(
+        "Path: {}, Included: {}, Excluded: {}, Include Priority: {}",
+        path_str, included, excluded, include_priority
+    );
 
     match (included, excluded) {
         (true, true) => include_priority,
@@ -48,11 +64,19 @@ pub fn should_include_file(
     }
 }
 
-fn matches_regex(path: &str, pattern: &str) -> bool {
-    Regex::new(pattern)
+fn matches_pattern(path: &str, pattern: &str) -> bool {
+    let regex_pattern = convert_wildcard_to_regex(pattern);
+    Regex::new(&regex_pattern)
         .map(|re| re.is_match(path))
         .unwrap_or_else(|e| {
-            error!("無效的正則表達式 '{}': {}", pattern, e);
+            error!("無效的正則表達式 '{}': {}", regex_pattern, e);
             false
         })
+}
+
+fn convert_wildcard_to_regex(pattern: &str) -> String {
+    pattern
+        .replace(".", r"\.")
+        .replace("*", ".*")
+        .replace("?", ".")
 }
