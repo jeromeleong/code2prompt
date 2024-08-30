@@ -19,7 +19,6 @@ c2p 簡化了 code2prompt 的操作方式，同時也修復了一些在使用時
 - 增加 `--hbs <.hbs path>` 配置，用於使用自定義 Handlebars 模板文件
 - 增加 `--in` 配置，同原有的`--include`
 - 增加 `--nor` 配置，同原有的`--exclude`
-- 增加 `--nor <regex>,<regex>` 配置，用正則表達式代替`--exclude <String>`原有方法
 - 修改 `-t / --template <template name>` 配置，專注於使用預定義的 Handlebars 模板文件
     - 直接使用`-t`而不填寫`<template name>`，會顯示所有預定義的 Handlebars 模板文件，並提供交互的方式來選擇使用相關 Handlebars 模板。
     - 使用`-t <template name>`時，不需要填寫`.hbs`，如`-t write-git-commit` 即可
